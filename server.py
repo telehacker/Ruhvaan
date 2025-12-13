@@ -26,6 +26,21 @@ def home():
 def health():
     return {"ok": True}
 
+@app.get("/models")
+def models():
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not set on Render")
+
+    genai.configure(api_key=api_key)
+
+    out = []
+    for m in genai.list_models():
+        if "generateContent" in m.supported_generation_methods:
+            out.append(m.name)
+
+    return {"models": out}
+
 @app.post("/chat")
 def chat(req: ChatRequest):
     api_key = os.getenv("GEMINI_API_KEY")
@@ -34,7 +49,7 @@ def chat(req: ChatRequest):
 
     try:
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("models/gemini-1.5-flash")
+        model = genai.GenerativeModel("models/gemini-flash-latest")
         resp = model.generate_content(req.message)
         reply = (getattr(resp, "text", "") or "").strip()
         return {"reply": reply or "Empty response from model"}
@@ -42,3 +57,4 @@ def chat(req: ChatRequest):
         print("GEMINI_ERROR:", repr(e))
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail="Gemini request failed; check Render logs")
+        
