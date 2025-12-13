@@ -1,13 +1,13 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
-import random
-import time
+import google.generativeai as genai
+import os
 
+# --- SETUP ---
 app = FastAPI()
 
-# Frontend ko connect karne ki permission (CORS)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 
@@ -16,42 +16,54 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Yahan apni API Key daalni hai (Inverted commas ke andar)
+GEMINI_API_KEY = "AIzaSyCbsW2SEGvjUU-FBOTeOKB_rn8fBdcjtC4" 
+genai.configure(api_key=GEMINI_API_KEY)
+
+# Model select kiya
+model = genai.GenerativeModel('gemini-pro')
+
 class ChatRequest(BaseModel):
     message: str
 
-# Ruhvaan ka brain (Abhi basic hai, baad me isme PDF/Notes jodenge)
-def get_ruhvaan_reply(text):
-    text = text.lower()
-    
-    if "hello" in text or "hi" in text:
-        return "Namaste! Main Ruhvaan hoon. Boliye kaise madad karoon?"
-    elif "kaise ho" in text:
-        return "Main ek AI hoon, hamesha active aur seekhne ke liye taiyaar!"
-    elif "date" in text or "time" in text:
-        return f"Abhi system time hai: {time.strftime('%H:%M:%S')}"
-    elif "bye" in text:
-        return "Alvida! Phir milenge."
-    elif "feature" in text:
-        return "Mere paas abhi Dark Mode, Clouds, aur History save karne ki shakti hai."
-    else:
-        # Default responses agar samajh na aaye
-        responses = [
-            "Hmm, dilchasp baat hai. Thora aur batayenge?",
-            "Main samajh raha hoon. Aage boliye.",
-            "Ye mere knowledge base me naya hai, par main seekh raha hoon.",
-            f"Aapne kaha: '{text}' - maine note kar liya hai."
-        ]
-        return random.choice(responses)
+# --- SYSTEM PROMPT (Ruhvaan ki personality) ---
+SYSTEM_INSTRUCTION = """
+Tum Ruhvaan AI ho, ek helpful aur friendly assistant.
+Tum Hinglish (Hindi + English) me baat karte ho.
+Tumhara goal hai student ki help karna, chahe wo coding ho, physics ho ya life advice.
+Agar koi puche tum kaise bane, to bolo 'Mujhe mere Creator ne Python se banaya hai'.
+"""
+
+chat_history = [] # Choti memory (jab tak server restart na ho)
+
+@app.get("/")
+def home():
+    return {"status": "Ruhvaan is Alive & Ready"}
 
 @app.post("/chat")
 async def chat_endpoint(req: ChatRequest):
-    # Thora wait karte hain taaki 'Thinking...' animation dikhe
-    time.sleep(1) 
-    reply = get_ruhvaan_reply(req.message)
-    return {"reply": reply}
+    user_text = req.message
+    
+    # History build karte hain taaki purani baat yaad rahe
+    history_text = SYSTEM_INSTRUCTION + "\n\n"
+    for msg in chat_history[-5:]: # Last 5 messages yaad rakhega
+        history_text += f"{msg['role']}: {msg['text']}\n"
+    
+    history_text += f"User: {user_text}\nRuhvaan:"
 
-# Server Run karne ke liye
+    try:
+        # Gemini se jawaab maango
+        response = model.generate_content(history_text)
+        reply = response.text
+        
+        # History save karo
+        chat_history.append({"role": "User", "text": user_text})
+        chat_history.append({"role": "Ruhvaan", "text": reply})
+        
+        return {"reply": reply}
+    except Exception as e:
+        return {"reply": "Sorry, abhi server busy hai ya API Key me issue hai."}
+
 if __name__ == "__main__":
-    print("🟢 Ruhvaan AI Server Starting...")
-    print("🔗 Access at: http://127.0.0.1:8000")
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=10000)
+
