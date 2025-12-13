@@ -34,7 +34,7 @@ def chat(req: ChatRequest):
 
     try:
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel("models/gemini-1.5-flash")
         resp = model.generate_content(req.message)
         reply = (getattr(resp, "text", "") or "").strip()
         return {"reply": reply or "Empty response from model"}
