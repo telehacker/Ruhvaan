@@ -2,6 +2,4 @@ fastapi
 uvicorn
 pydantic
 python-multipart
-requests
-jinja2
-aiofiles
+google-generativeai
