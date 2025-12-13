@@ -26,21 +26,6 @@ def home():
 def health():
     return {"ok": True}
 
-@app.get("/models")
-def models():
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not set on Render")
-
-    genai.configure(api_key=api_key)
-
-    out = []
-    for m in genai.list_models():
-        if "generateContent" in m.supported_generation_methods:
-            out.append(m.name)
-
-    return {"models": out}
-
 @app.post("/chat")
 def chat(req: ChatRequest):
     api_key = os.getenv("GEMINI_API_KEY")
