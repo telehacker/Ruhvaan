@@ -34,9 +34,11 @@ def chat(req: ChatRequest):
 
     try:
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-1.5-flash")  # stable + widely used in docs [web:334]
+        model = genai.GenerativeModel("gemini-1.5-flash")
         resp = model.generate_content(req.message)
-        return {"reply": (resp.text or "").strip() or "Empty response"}
-    except Exception
-
-
+        reply = (getattr(resp, "text", "") or "").strip()
+        return {"reply": reply or "Empty response from model"}
+    except Exception as e:
+        print("GEMINI_ERROR:", repr(e))
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail="Gemini request failed; check Render logs")
