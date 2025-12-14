@@ -43,12 +43,22 @@ def chat(req: ChatRequest):
     try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel("models/gemini-flash-latest")
-        user_name = "bhai" # (Ya extract_user_name wala logic)
+        
+        user_name = "bhai" # Ya extract_user_name logic
+        
+        # --- YE IMPORTANT HAI ---
         full_prompt = SYSTEM_PROMPT + "\nUser message: " + req.message
+        resp = model.generate_content(full_prompt) # Ye line add/check karo
+        # ------------------------
+
         reply = (getattr(resp, "text", "") or "").strip()
+        
+        # Branding hack
+        reply = reply.replace("Google", "Ruhvaan")
+        
         return {"reply": reply or "Empty response from model"}
+
     except Exception as e:
         print("GEMINI_ERROR:", repr(e))
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail="Gemini request failed; check Render logs")
-        
