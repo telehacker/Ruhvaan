@@ -91,7 +91,8 @@ def chat(req: ChatRequest):
             # Current Key use karo
             active_key = API_KEYS[current_key_index]
             genai.configure(api_key=active_key)
-            model = genai.GenerativeModel("gemini-1.5-flash") # Updated model name for better performance
+            model = genai.GenerativeModel("gemini-pro")
+ # Updated model name for better performance
 
             # User Name Logic
             user_name = extract_user_name(req.message) or "bhai"
