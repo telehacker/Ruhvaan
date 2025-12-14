@@ -111,15 +111,49 @@
         .action-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px var(--primary-glow); }
         .action-btn:active { transform: scale(0.98); }
 
+        /* animated ripple for actions */
+        .action-btn.animating::after {
+            content: '';
+            position: absolute;
+            left: 50%; top: 50%;
+            width: 8px; height: 8px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 50%;
+            transform: translate(-50%,-50%) scale(1);
+            animation: ripple 800ms ease-out forwards;
+            pointer-events: none;
+        }
+        @keyframes ripple {
+            0% { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+            100% { transform: translate(-50%,-50%) scale(18); opacity: 0; }
+        }
+
         .menu-list { flex: 1; margin-top: 30px; overflow-y: auto; }
         .menu-item {
             padding: 12px 16px; border-radius: 10px;
             color: var(--text-muted); cursor: pointer;
             display: flex; align-items: center; gap: 12px;
             transition: 0.2s; font-size: 15px; margin-bottom: 5px;
+            position: relative;
         }
         .menu-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
         .menu-item.active { background: var(--primary-dim); color: var(--primary); border: 1px solid rgba(59,130,246,0.2); }
+
+        /* temporary animated indicator inside menu item */
+        .menu-item .module-anim {
+            width: 12px; height: 12px; border-radius: 50%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            box-shadow: 0 0 8px rgba(59,130,246,0.6);
+            margin-left: auto;
+            transform: scale(0);
+            animation: moduleBounce 1000ms ease-out forwards;
+        }
+        @keyframes moduleBounce {
+            0% { transform: scale(0); opacity: 0; }
+            30% { transform: scale(1.2); opacity: 1; }
+            60% { transform: scale(0.9); }
+            100% { transform: scale(1); opacity: 1; }
+        }
 
         .tg-card {
             margin-top: 20px; padding: 16px; 
@@ -162,6 +196,7 @@
             flex: 1; overflow-y: auto; padding: 40px 15%;
             display: flex; flex-direction: column; gap: 24px;
             scroll-behavior: auto; /* Managed by JS for smooth scroll */
+            position: relative;
         }
         
         .msg-row { display: flex; gap: 16px; opacity: 0; animation: fadeIn 0.4s forwards; }
@@ -240,6 +275,45 @@
         .send-btn:hover { background: var(--primary); color: #fff; transform: scale(1.1) rotate(-10deg); }
         .send-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; background: #333; color: #555; }
 
+        /* Mascot (small character inside chatbox) */
+        .mascot {
+            position: absolute;
+            left: 48px; /* aligns with chat left padding (15% of width is variable; this is a reasonable offset) */
+            bottom: 36px;
+            width: 46px; height: 46px;
+            background: linear-gradient(180deg, #2b2b2f, #111);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.6), 0 0 8px rgba(59,130,246,0.08);
+            cursor: pointer;
+            z-index: 30;
+            transition: transform 250ms ease;
+        }
+        .mascot .eyes {
+            width: 20px; height: 10px; display: flex; gap: 6px; align-items: center;
+        }
+        .mascot .eyes span {
+            width: 6px; height: 6px; background: #fff; border-radius: 50%;
+            display: inline-block; transform-origin: center;
+        }
+        .mascot.bounce { animation: mascotBounce 900ms ease; }
+        @keyframes mascotBounce {
+            0% { transform: translateY(0) scale(1); }
+            30% { transform: translateY(-8px) scale(1.05); }
+            60% { transform: translateY(0) scale(0.98); }
+            100% { transform: translateY(0) scale(1); }
+        }
+        .mascot .tooltip {
+            position: absolute;
+            bottom: 56px; left: 50%; transform: translateX(-50%);
+            background: rgba(255,255,255,0.05); color: #fff;
+            font-size: 12px; padding: 6px 8px; border-radius: 10px;
+            border: 1px solid var(--border); white-space: nowrap;
+            opacity: 0; pointer-events: none; transition: opacity 180ms;
+        }
+        .mascot.show-tooltip .tooltip { opacity: 1; }
+
         /* Mobile Responsive */
         @media (max-width: 850px) {
             .sidebar { position: absolute; height: 100%; transform: translateX(-100%); }
@@ -248,6 +322,7 @@
             .input-section { padding: 20px 10px; }
             .header { padding: 0 20px; }
             .mobile-menu-btn { display: block !important; }
+            .mascot { left: 18px; bottom: 110px; } /* avoid input area on small screens */
         }
         .mobile-menu-btn { 
             display: none; font-size: 20px; margin-right: 15px; cursor: pointer; color: #fff;
@@ -276,7 +351,7 @@
             <div style="font-size:12px; color:#666; margin-top:5px;">Advanced Neural Core</div>
         </div>
 
-        <button class="action-btn" onclick="resetChat()">
+        <button class="action-btn" id="newChatBtn" onclick="animateAction(this); resetChat()">
             <i class="fas fa-plus"></i> Start New Chat
         </button>
 
@@ -284,10 +359,10 @@
             <div class="menu-item active">
                 <i class="fas fa-comment-alt"></i> Chat Interface
             </div>
-            <div class="menu-item" onclick="alert('Image Generation module loading...')">
+            <div class="menu-item" onclick="triggerModuleAnim(this, 'Generate Images')">
                 <i class="fas fa-image"></i> Generate Images
             </div>
-            <div class="menu-item" onclick="alert('Voice module loading...')">
+            <div class="menu-item" onclick="triggerModuleAnim(this, 'Voice Mode')">
                 <i class="fas fa-microphone"></i> Voice Mode
             </div>
             <div class="menu-item" onclick="clearStorage()">
@@ -319,6 +394,14 @@
 
         <div class="chat-container" id="chatContainer">
             <!-- Messages will appear here -->
+
+            <!-- Small decorative mascot/character inside chatbox -->
+            <div class="mascot" id="mascot" title="Ruhvaan">
+                <div class="eyes" aria-hidden="true">
+                    <span></span><span></span>
+                </div>
+                <div class="tooltip">Hi! I'm Ruhvaan 🙂</div>
+            </div>
         </div>
 
         <div class="input-section">
@@ -337,8 +420,10 @@
 
     <script>
         /**
-         * RUHVAAN AI ENGINE v1.0
-         * Handles Chat, Animations, Sound, and Memory
+         * RUHVAAN AI ENGINE v1.0 (Modified)
+         * - Removed intrusive alert popups on sidebar menu items.
+         * - Added subtle animated feedback for module clicks & action button.
+         * - Added a small mascot character inside the chatbox (decorative + interactive).
          */
         
         // --- CONFIGURATION ---
@@ -350,6 +435,8 @@
         const sendBtn = document.getElementById('sendBtn');
         const sndSend = document.getElementById('snd-send');
         const sndReceive = document.getElementById('snd-receive');
+        const mascot = document.getElementById('mascot');
+        const newChatBtn = document.getElementById('newChatBtn');
 
         // State
         let isGenerating = false;
@@ -541,6 +628,8 @@
             if(confirm("Start new chat? Purani chat delete ho jayegi.")) {
                 localStorage.removeItem('ruhvaan_chat');
                 chatContainer.innerHTML = '';
+                // re-insert mascot so it remains visible after clearing
+                chatContainer.appendChild(mascot);
                 addMessageToUI("Chat reset successful. Starting fresh!", 'bot');
             }
         }
@@ -549,6 +638,76 @@
             localStorage.clear();
             alert("Memory Cleared!");
             location.reload();
+        }
+
+        // --- NEW: Non-blocking module animation (replaces alert popups) ---
+        function triggerModuleAnim(el, moduleName) {
+            // create small animated dot inside the menu item to show feedback
+            // remove any existing anim node first
+            const existing = el.querySelector('.module-anim');
+            if (existing) existing.remove();
+
+            const dot = document.createElement('span');
+            dot.className = 'module-anim';
+            el.appendChild(dot);
+
+            // briefly animate the action button too for feedback
+            animateAction(newChatBtn);
+
+            // optional: show a small ephemeral toast near header (non-blocking)
+            showTinyToast(`${moduleName} loading...`);
+
+            // remove the dot after animation
+            setTimeout(() => {
+                dot.remove();
+            }, 1200);
+        }
+
+        // animateAction: adds ripple effect to a button
+        function animateAction(btn) {
+            if(!btn) return;
+            btn.classList.add('animating');
+            setTimeout(() => btn.classList.remove('animating'), 900);
+        }
+
+        // small non-blocking toast (fades away)
+        function showTinyToast(text) {
+            const toast = document.createElement('div');
+            toast.textContent = text;
+            toast.style.position = 'fixed';
+            toast.style.right = '26px';
+            toast.style.bottom = '26px';
+            toast.style.padding = '10px 14px';
+            toast.style.background = 'rgba(255,255,255,0.04)';
+            toast.style.border = '1px solid var(--border)';
+            toast.style.borderRadius = '10px';
+            toast.style.color = '#ddd';
+            toast.style.zIndex = 60;
+            toast.style.fontSize = '13px';
+            toast.style.boxShadow = '0 6px 18px rgba(0,0,0,0.6)';
+            document.body.appendChild(toast);
+            setTimeout(()=> { toast.style.transition = 'opacity 300ms'; toast.style.opacity = '0'; }, 1100);
+            setTimeout(()=> { toast.remove(); }, 1500);
+        }
+
+        // --- Mascot interactions ---
+        // mascot bounces and shows small tooltip when clicked
+        if (mascot) {
+            mascot.addEventListener('click', () => {
+                mascot.classList.remove('bounce');
+                // retrigger animation
+                void mascot.offsetWidth;
+                mascot.classList.add('bounce');
+                mascot.classList.add('show-tooltip');
+                setTimeout(()=> mascot.classList.remove('show-tooltip'), 1600);
+            });
+
+            // small idle blink for eyes
+            setInterval(() => {
+                const eyes = mascot.querySelectorAll('.eyes span');
+                eyes.forEach(e => e.style.transform = 'scaleY(0.25)');
+                setTimeout(() => eyes.forEach(e => e.style.transform = 'scaleY(1)'), 140);
+            }, 4200);
         }
 
         // --- EVENT LISTENERS ---
