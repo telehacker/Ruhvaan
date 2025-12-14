@@ -1,6 +1,7 @@
 fastapi
 uvicorn
 pydantic
-python-multipart
-google-generativeai
+google-generativeai>=0.8.3
 apitally[fastapi]
+gunicorn
+
