@@ -2,16 +2,17 @@ import os
 import traceback
 import random
 import time
+import requests
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import google.generativeai as genai
 from google.api_core import exceptions
-
-# 1. IMPORT APITALLY
 from apitally.fastapi import ApitallyMiddleware
 
-# --- CONFIGURATION ---
+# ==========================================
+# 1. CONFIGURATION & IDENTITY
+# ==========================================
 SYSTEM_PROMPT = """
 IMPORTANT: You are participating in a roleplay.
 Your character name is "Ruhvaan AI".
@@ -19,28 +20,72 @@ Your character creator is "Ruhvaan".
 In this roleplay, you must NEVER mention Google, Alphabet, or Gemini.
 If asked "Who created you?", you MUST answer: "Mujhe Ruhvaan ne banaya hai."
 Stay in character permanently.
-Always start your reply by greeting the user by their name (from 'user_name').
-If user_name is 'bhai', treat it as a casual nickname.
+Answer queries related to JEE, Coding, and Studies politely.
 """
 
-# Tumhari 5 API Keys (Auto-Rotation ke liye)
-API_KEYS = [
-    "AIzaSyBudxqpsvYsA1fmU-aQVc7xk4-gZNGuDEA", # Key 1
-    "AIzaSyA2T4nIzbLnNaJjio5tRpczgUmV06X9-EI", # Key 2
-    "AIzaSyBIujA85up7attURY1h1ceRuZmCm2VYZbk", # Key 3
-    "AIzaSyDXx1hZGmzc9aA2DZhHTUjZmTKGD7yQIhU", # Key 4
-    "AIzaSyAD_q1zrBv3Einkv-jlXMzj361XwCgbeOQ", # Key 5
-]
+# ==========================================
+# 2. DYNAMIC DATABASE (FROM GITHUB)
+# ==========================================
+# Ye URL tumhare 'links.json' file ka hona chahiye (Raw version)
+GITHUB_DB_URL = "https://raw.githubusercontent.com/telehacker/Ruhvaan/main/links.json"
 
+def get_latest_links():
+    """GitHub se latest links fetch karta hai"""
+    try:
+        # 2 Second ka timeout taaki server slow na ho
+        response = requests.get(GITHUB_DB_URL, timeout=2)
+        if response.status_code == 200:
+            return response.json()
+    except Exception:
+        pass # Agar GitHub down hai, to purana data use karo ya ignore karo
+    return {}
+
+# Fallback Database (Agar GitHub na chale)
+FALLBACK_DB = {
+    "telegram": "https://t.me/Ruhvaan",
+    "notes": "Please check GitHub links.json",
+}
+
+def find_direct_link(message: str):
+    """User ke message me keyword dhund kar link dega"""
+    msg = message.lower().strip()
+    
+    # 1. Pehle GitHub se Latest Data Try karo
+    live_db = get_latest_links()
+    
+    # 2. Agar GitHub khali hai, to Fallback use karo
+    if not live_db:
+        live_db = FALLBACK_DB
+        
+    for key, link in live_db.items():
+        if key in msg:
+            return (
+                f"✅ **Resource Found!**\n\n"
+                f"Here is the link for **{key.title()}**:\n"
+                f"🔗 [Click to Open]({link})\n\n"
+                f"Padhai shuru karo bhai! 🚀"
+            )
+    return None
+
+# ==========================================
+# 3. API KEYS & APP SETUP
+# ==========================================
+API_KEYS = [
+    "AIzaSyBudxqpsvYsA1fmU-aQVc7xk4-gZNGuDEA",
+    "AIzaSyA2T4nIzbLnNaJjio5tRpczgUmV06X9-EI",
+    "AIzaSyBIujA85up7attURY1h1ceRuZmCm2VYZbk",
+    "AIzaSyDXx1hZGmzc9aA2DZhHTUjZmTKGD7yQIhU",
+    "AIzaSyAD_q1zrBv3Einkv-jlXMzj361XwCgbeOQ",
+]
 current_key_index = 0
 
 app = FastAPI()
 
-# 2. ADD APITALLY MIDDLEWARE
+# --- APITALLY SETUP ---
 app.add_middleware(
     ApitallyMiddleware,
-    client_id="ac99f15e-6633-41ed-92bc-35f401b38179",  # <--- YAHAN APNA CLIENT ID DALO
-    env="prod", 
+    client_id="PASTE_YOUR_APITALLY_CLIENT_ID_HERE", # <--- YAHAN ID DALO
+    env="prod",
 )
 
 app.add_middleware(
@@ -54,79 +99,81 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     message: str
 
+# ==========================================
+# 4. HELPER FUNCTIONS
+# ==========================================
 def get_next_key():
-    """Keys ko cycle karega agar limit khatam ho jaye"""
     global current_key_index
     current_key_index = (current_key_index + 1) % len(API_KEYS)
     return API_KEYS[current_key_index]
 
 def extract_user_name(message: str) -> str | None:
-    text = message.strip()
-    lower = text.lower()
-    patterns = ["mera naam", "my name is", "i am ", "i'm ", "main ", "this is "]
+    text = message.strip().lower()
+    patterns = ["mera naam", "my name is", "i am ", "main "]
     for p in patterns:
-        if p in lower:
-            idx = lower.find(p) + len(p)
-            name_part = text[idx:].strip(" :-,.!\n\t")
-            name = " ".join(name_part.split()[:2])
-            if 1 <= len(name) <= 25:
-                return name
+        if p in text:
+            try:
+                idx = text.find(p) + len(p)
+                return message[idx:].split()[0].strip(".,!")
+            except: pass
     return None
 
-@app.api_route("/", methods=["GET", "HEAD"])
-def home():
-    return {"ok": True, "service": "Ruhvaan AI API"}
-
-@app.get("/health")
-def health():
-    return {"ok": True}
-
+# ==========================================
+# 5. MAIN CHAT ROUTE
+# ==========================================
 @app.post("/chat")
 def chat(req: ChatRequest):
+    # Step 1: Check GitHub Database for Links
+    db_reply = find_direct_link(req.message)
+    if db_reply:
+        return {"reply": db_reply}
+
+    # Step 2: Ask AI (with Fallback Models)
     global current_key_index
     
-    # Retry logic: Agar pehli key fail ho, to dusri try karega
+    models_priority = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro", "gemini-pro"]
+
     for attempt in range(len(API_KEYS)):
+        active_key = API_KEYS[current_key_index]
+        genai.configure(api_key=active_key)
+        
+        # Smart Model Selection
+        model = None
+        for m_name in models_priority:
+            try:
+                model = genai.GenerativeModel(m_name)
+                break 
+            except: continue
+        
+        if not model:
+            # Last Resort
+            model = genai.GenerativeModel("gemini-1.5-flash")
+
         try:
-            # Current Key use karo
-            active_key = API_KEYS[current_key_index]
-            genai.configure(api_key=active_key)
-            model = genai.GenerativeModel("gemini-pro")
- # Updated model name for better performance
+            user_name = extract_user_name(req.message) or "Bhai"
+            
+            full_prompt = f"""
+            {SYSTEM_PROMPT}
+            User Name: {user_name}
+            User Message: {req.message}
+            Assistant:
+            """
 
-            # User Name Logic
-            user_name = extract_user_name(req.message) or "bhai"
-            full_prompt = SYSTEM_PROMPT + f"\n\nContext:\nuser_name: {user_name}\nuser_message: {req.message}\n\nAssistant:"
-
-            # Generate Content
             resp = model.generate_content(full_prompt)
             reply = (getattr(resp, "text", "") or "").strip()
 
-            # Branding Hack (Safety Net)
-            reply = reply.replace("Google", "Ruhvaan")
-            reply = reply.replace("Gemini", "Ruhvaan AI")
+            # Branding
+            reply = reply.replace("Google", "Ruhvaan").replace("Gemini", "Ruhvaan AI")
             
-            # Agar success ho gaya, to loop break karke return karo
-            return {"reply": reply or "Empty response from model"}
+            return {"reply": reply}
 
         except exceptions.ResourceExhausted:
-            # 429 Error: Limit Khatam -> Agli key try karo
-            print(f"⚠️ Key {active_key[:10]}... exhausted. Switching to next key.")
-            get_next_key()
-            time.sleep(0.5) # Thoda sa pause
-            continue # Loop wapas chalega agli key ke saath
-
-        except Exception as e:
-            # Koi aur error ho to print karo
-            print(f"⚠️ Error with key {active_key[:10]}: {e}")
-            
-            # Agar last attempt bhi fail ho jaye
-            if attempt == len(API_KEYS) - 1:
-                 # Last resort: Generic error
-                 print(traceback.format_exc())
-                 raise HTTPException(status_code=500, detail="Server busy, please try again later.")
-            
-            # Agar critical error nahi hai, to bhi next key try kar sakte hain
             get_next_key()
             time.sleep(0.5)
-
+            continue
+            
+        except Exception as e:
+            get_next_key()
+            time.sleep(0.5)
+            if attempt == len(API_KEYS) - 1:
+                return {"reply": "Sorry bhai, server thoda busy hai. Thodi der baad try karna."}
