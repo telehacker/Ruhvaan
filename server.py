@@ -43,7 +43,8 @@ def chat(req: ChatRequest):
     try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel("models/gemini-flash-latest")
-        resp = model.generate_content(req.message)
+        user_name = "bhai" # (Ya extract_user_name wala logic)
+        full_prompt = SYSTEM_PROMPT + "\nUser message: " + req.message
         reply = (getattr(resp, "text", "") or "").strip()
         return {"reply": reply or "Empty response from model"}
     except Exception as e:
