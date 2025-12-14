@@ -84,7 +84,7 @@ app = FastAPI()
 # --- APITALLY SETUP ---
 app.add_middleware(
     ApitallyMiddleware,
-    client_id="PASTE_YOUR_APITALLY_CLIENT_ID_HERE", # <--- YAHAN ID DALO
+    client_id="ac99f15e-6633-41ed-92bc-35f401b38179", # <--- YAHAN ID DALO
     env="prod",
 )
 
