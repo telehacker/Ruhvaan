@@ -8,6 +8,9 @@ from pydantic import BaseModel
 import google.generativeai as genai
 from google.api_core import exceptions
 
+# 1. IMPORT APITALLY
+from apitally.fastapi import ApitallyMiddleware
+
 # --- CONFIGURATION ---
 SYSTEM_PROMPT = """
 IMPORTANT: You are participating in a roleplay.
@@ -32,6 +35,13 @@ API_KEYS = [
 current_key_index = 0
 
 app = FastAPI()
+
+# 2. ADD APITALLY MIDDLEWARE
+app.add_middleware(
+    ApitallyMiddleware,
+    client_id="ac99f15e-6633-41ed-92bc-35f401b38179",  # <--- YAHAN APNA CLIENT ID DALO
+    env="prod", 
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -81,7 +91,7 @@ def chat(req: ChatRequest):
             # Current Key use karo
             active_key = API_KEYS[current_key_index]
             genai.configure(api_key=active_key)
-            model = genai.GenerativeModel("models/gemini-flash-latest")
+            model = genai.GenerativeModel("gemini-1.5-flash") # Updated model name for better performance
 
             # User Name Logic
             user_name = extract_user_name(req.message) or "bhai"
@@ -118,3 +128,4 @@ def chat(req: ChatRequest):
             # Agar critical error nahi hai, to bhi next key try kar sakte hain
             get_next_key()
             time.sleep(0.5)
+
