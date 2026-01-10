@@ -1,14 +1,14 @@
 import os
-import traceback
 import random
 import time
+from typing import Optional
+from urllib.parse import quote
+
 import requests
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
-import google.generativeai as genai
-from google.api_core import exceptions
-from apitally.fastapi import ApitallyMiddleware
 
 # ==========================================
 # 1. CONFIGURATION & IDENTITY
@@ -70,27 +70,20 @@ def find_direct_link(message: str):
 # ==========================================
 # 3. API KEYS & APP SETUP
 # ==========================================
-API_KEYS = [
-    "AIzaSyBudxqpsvYsA1fmU-aQVc7xk4-gZNGuDEA",
-    "AIzaSyA2T4nIzbLnNaJjio5tRpczgUmV06X9-EI",
-    "AIzaSyBIujA85up7attURY1h1ceRuZmCm2VYZbk",
-    "AIzaSyDXx1hZGmzc9aA2DZhHTUjZmTKGD7yQIhU",
-    "AIzaSyAD_q1zrBv3Einkv-jlXMzj361XwCgbeOQ",
+PPLX_API_URL = "https://api.perplexity.ai/chat/completions"
+PPLX_API_KEY = os.getenv("PPLX_API_KEY", "").strip()
+PPLX_MODEL = os.getenv("PPLX_MODEL", "sonar")
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("ALLOWED_ORIGINS", "*").split(",")
+    if origin.strip()
 ]
-current_key_index = 0
 
 app = FastAPI()
 
-# --- APITALLY SETUP ---
-app.add_middleware(
-    ApitallyMiddleware,
-    client_id="ac99f15e-6633-41ed-92bc-35f401b38179", # <--- YAHAN ID DALO
-    env="prod",
-)
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS or ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -99,15 +92,24 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     message: str
 
+
+class ImageRequest(BaseModel):
+    prompt: str
+
+
+@app.get("/")
+def root():
+    return PlainTextResponse("Ruhvaan API is running.", status_code=200)
+
+
+@app.get("/favicon.ico")
+def favicon():
+    return PlainTextResponse("", status_code=204)
+
 # ==========================================
 # 4. HELPER FUNCTIONS
 # ==========================================
-def get_next_key():
-    global current_key_index
-    current_key_index = (current_key_index + 1) % len(API_KEYS)
-    return API_KEYS[current_key_index]
-
-def extract_user_name(message: str) -> str | None:
+def extract_user_name(message: str) -> Optional[str]:
     text = message.strip().lower()
     patterns = ["mera naam", "my name is", "i am ", "main "]
     for p in patterns:
@@ -128,52 +130,63 @@ def chat(req: ChatRequest):
     if db_reply:
         return {"reply": db_reply}
 
-    # Step 2: Ask AI (with Fallback Models)
-    global current_key_index
-    
-    models_priority = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro", "gemini-pro"]
+    # Step 2: Ask AI (Perplexity)
+    if not PPLX_API_KEY:
+        return {
+            "reply": (
+                "Server configuration missing PPLX_API_KEY. "
+                "Please add it to the backend environment."
+            )
+        }
+    user_name = extract_user_name(req.message) or "Bhai"
 
-    for attempt in range(len(API_KEYS)):
-        active_key = API_KEYS[current_key_index]
-        genai.configure(api_key=active_key)
-        
-        # Smart Model Selection
-        model = None
-        for m_name in models_priority:
-            try:
-                model = genai.GenerativeModel(m_name)
-                break 
-            except: continue
-        
-        if not model:
-            # Last Resort
-            model = genai.GenerativeModel("gemini-1.5-flash")
+    payload = {
+        "model": PPLX_MODEL,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT.strip()},
+            {
+                "role": "user",
+                "content": f"User Name: {user_name}\nUser Message: {req.message}",
+            },
+        ],
+        "temperature": 0.7,
+        "max_tokens": 512,
+    }
 
-        try:
-            user_name = extract_user_name(req.message) or "Bhai"
-            
-            full_prompt = f"""
-            {SYSTEM_PROMPT}
-            User Name: {user_name}
-            User Message: {req.message}
-            Assistant:
-            """
+    try:
+        response = requests.post(
+            PPLX_API_URL,
+            headers={"Authorization": f"Bearer {PPLX_API_KEY}"},
+            json=payload,
+            timeout=30,
+        )
+        response.raise_for_status()
+        data = response.json()
+        reply = (
+            data.get("choices", [{}])[0]
+            .get("message", {})
+            .get("content", "")
+            .strip()
+        )
+    except requests.RequestException:
+        time.sleep(0.5)
+        return {"reply": "Sorry bhai, server thoda busy hai. Thodi der baad try karna."}
 
-            resp = model.generate_content(full_prompt)
-            reply = (getattr(resp, "text", "") or "").strip()
+    # Branding
+    reply = reply.replace("Google", "Ruhvaan").replace("Gemini", "Ruhvaan AI")
+    return {"reply": reply}
 
-            # Branding
-            reply = reply.replace("Google", "Ruhvaan").replace("Gemini", "Ruhvaan AI")
-            
-            return {"reply": reply}
 
-        except exceptions.ResourceExhausted:
-            get_next_key()
-            time.sleep(0.5)
-            continue
-            
-        except Exception as e:
-            get_next_key()
-            time.sleep(0.5)
-            if attempt == len(API_KEYS) - 1:
-                return {"reply": "Sorry bhai, server thoda busy hai. Thodi der baad try karna."}
+@app.post("/image")
+def generate_image(req: ImageRequest):
+    prompt = req.prompt.strip()
+    if not prompt:
+        raise HTTPException(status_code=400, detail="Prompt is required.")
+
+    seed = random.randint(1, 999999)
+    safe_prompt = quote(prompt)
+    image_url = (
+        "https://image.pollinations.ai/prompt/"
+        f"{safe_prompt}?width=768&height=768&seed={seed}"
+    )
+    return {"image_url": image_url}
