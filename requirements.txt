@@ -1,6 +1,5 @@
 fastapi
 uvicorn
 pydantic
-apitally[fastapi]
 gunicorn
 requests

@@ -7,9 +7,8 @@ from urllib.parse import quote
 import requests
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
-from apitally.fastapi import ApitallyMiddleware
 
 # ==========================================
 # 1. CONFIGURATION & IDENTITY
@@ -82,13 +81,6 @@ ALLOWED_ORIGINS = [
 
 app = FastAPI()
 
-# --- APITALLY SETUP ---
-app.add_middleware(
-    ApitallyMiddleware,
-    client_id="ac99f15e-6633-41ed-92bc-35f401b38179", # <--- YAHAN ID DALO
-    env="prod",
-)
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS or ["*"],
@@ -107,9 +99,6 @@ class ImageRequest(BaseModel):
 
 @app.get("/")
 def root():
-    index_path = os.path.join(os.path.dirname(__file__), "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
     return PlainTextResponse("Ruhvaan API is running.", status_code=200)
 
 

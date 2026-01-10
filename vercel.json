@@ -5,6 +5,7 @@
     }
   },
   "rewrites": [
+    {"source": "/", "destination": "/api/index.py"},
     {"source": "/chat", "destination": "/api/index.py"},
     {"source": "/image", "destination": "/api/index.py"},
     {"source": "/api/(.*)", "destination": "/api/index.py"}
