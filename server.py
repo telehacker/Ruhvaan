@@ -8,8 +8,10 @@ from urllib.parse import quote
 import requests
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from pydantic import BaseModel
+
+from ui_html import INDEX_HTML
 
 # ==========================================
 # 1. CONFIGURATION & IDENTITY
@@ -103,7 +105,7 @@ def root():
     index_path = Path(__file__).resolve().parent / "index.html"
     if index_path.is_file():
         return FileResponse(index_path)
-    return PlainTextResponse("Ruhvaan API is running.", status_code=200)
+    return HTMLResponse(INDEX_HTML)
 
 
 @app.get("/favicon.ico")
