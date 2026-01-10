@@ -359,7 +359,7 @@
             <div class="menu-item active">
                 <i class="fas fa-comment-alt"></i> Chat Interface
             </div>
-            <div class="menu-item" onclick="triggerModuleAnim(this, 'Generate Images')">
+            <div class="menu-item" onclick="handleImageGeneration(this)">
                 <i class="fas fa-image"></i> Generate Images
             </div>
             <div class="menu-item" onclick="triggerModuleAnim(this, 'Voice Mode')">
@@ -531,6 +531,33 @@
             scrollToBottom();
         }
 
+        function addImageToUI(imageUrl, promptText) {
+            const div = document.createElement('div');
+            div.className = 'msg-row bot';
+
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar';
+            avatar.innerHTML = '<i class="fas fa-cube"></i>';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+
+            const img = document.createElement('img');
+            img.src = imageUrl;
+            img.alt = promptText || 'Generated image';
+            img.loading = 'lazy';
+            img.style.maxWidth = '100%';
+            img.style.borderRadius = '12px';
+            img.style.display = 'block';
+            img.style.border = '1px solid rgba(255,255,255,0.08)';
+
+            bubble.appendChild(img);
+            div.appendChild(avatar);
+            div.appendChild(bubble);
+            chatContainer.appendChild(div);
+            scrollToBottom();
+        }
+
         // 3. Typing Effect (ChatGPT Style)
         function typeWriterEffect(text) {
             return new Promise(resolve => {
@@ -571,14 +598,14 @@
         }
 
         // 4. Loading Indicator
-        function addLoadingIndicator() {
+        function addLoadingIndicator(label = 'Thinking...') {
             const id = 'loading-' + Date.now();
             const div = document.createElement('div');
             div.className = 'msg-row bot';
             div.id = id;
             div.innerHTML = `
                 <div class="avatar"><i class="fas fa-circle-notch fa-spin"></i></div>
-                <div class="bubble" style="color:#777; font-style:italic">Thinking...</div>
+                <div class="bubble" style="color:#777; font-style:italic">${label}</div>
             `;
             chatContainer.appendChild(div);
             scrollToBottom();
@@ -608,9 +635,9 @@
         }
 
         // --- MEMORY MANAGEMENT (Local Storage) ---
-        function saveToHistory(text, sender) {
+        function saveToHistory(text, sender, type = 'text', imageUrl = '') {
             const history = JSON.parse(localStorage.getItem('ruhvaan_chat') || '[]');
-            history.push({ text, sender });
+            history.push({ text, sender, type, imageUrl });
             localStorage.setItem('ruhvaan_chat', JSON.stringify(history));
         }
 
@@ -620,7 +647,13 @@
                 // Default Welcome Message
                 addMessageToUI("**Hello! Main Ruhvaan hoon.**\nSystem online and ready. Main aapki kya madad karoon?", 'bot');
             } else {
-                history.forEach(msg => addMessageToUI(msg.text, msg.sender));
+                history.forEach(msg => {
+                    if (msg.type === 'image' && msg.imageUrl) {
+                        addImageToUI(msg.imageUrl, msg.text);
+                    } else {
+                        addMessageToUI(msg.text, msg.sender);
+                    }
+                });
             }
         }
 
@@ -661,6 +694,38 @@
             setTimeout(() => {
                 dot.remove();
             }, 1200);
+        }
+
+        async function handleImageGeneration(el) {
+            triggerModuleAnim(el, 'Generate Images');
+            if (isGenerating) return;
+            const promptText = window.prompt('Describe the image you want to generate:');
+            if (!promptText) return;
+
+            isGenerating = true;
+            addMessageToUI(promptText, 'user');
+            saveToHistory(promptText, 'user');
+
+            const loadingId = addLoadingIndicator('Generating image...');
+
+            try {
+                const response = await fetch(`${API_URL}/image`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: promptText })
+                });
+
+                if (!response.ok) throw new Error('Image generation failed');
+                const data = await response.json();
+                removeElement(loadingId);
+                addImageToUI(data.image_url, promptText);
+                saveToHistory(promptText, 'bot', 'image', data.image_url);
+            } catch (error) {
+                removeElement(loadingId);
+                addMessageToUI("⚠️ Image generation failed. Try a different prompt.", 'bot');
+            } finally {
+                isGenerating = false;
+            }
         }
 
         // animateAction: adds ripple effect to a button
