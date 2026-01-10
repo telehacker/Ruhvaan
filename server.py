@@ -1,13 +1,14 @@
 import os
 import random
 import time
+from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
 
 import requests
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel
 
 # ==========================================
@@ -99,6 +100,9 @@ class ImageRequest(BaseModel):
 
 @app.get("/")
 def root():
+    index_path = Path(__file__).resolve().parent / "index.html"
+    if index_path.is_file():
+        return FileResponse(index_path)
     return PlainTextResponse("Ruhvaan API is running.", status_code=200)
 
 
