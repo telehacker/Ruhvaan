@@ -1,6 +1,7 @@
 import os
 import random
 import time
+from typing import Optional
 from urllib.parse import quote
 
 import requests
@@ -72,6 +73,11 @@ def find_direct_link(message: str):
 PPLX_API_URL = "https://api.perplexity.ai/chat/completions"
 PPLX_API_KEY = os.getenv("PPLX_API_KEY", "").strip()
 PPLX_MODEL = os.getenv("PPLX_MODEL", "sonar")
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("ALLOWED_ORIGINS", "*").split(",")
+    if origin.strip()
+]
 
 app = FastAPI()
 
@@ -84,7 +90,7 @@ app.add_middleware(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS or ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -100,14 +106,7 @@ class ImageRequest(BaseModel):
 # ==========================================
 # 4. HELPER FUNCTIONS
 # ==========================================
-def ensure_api_key():
-    if not PPLX_API_KEY:
-        raise HTTPException(
-            status_code=500,
-            detail="Missing Perplexity API key. Please set PPLX_API_KEY on the server.",
-        )
-
-def extract_user_name(message: str) -> str | None:
+def extract_user_name(message: str) -> Optional[str]:
     text = message.strip().lower()
     patterns = ["mera naam", "my name is", "i am ", "main "]
     for p in patterns:
@@ -129,7 +128,13 @@ def chat(req: ChatRequest):
         return {"reply": db_reply}
 
     # Step 2: Ask AI (Perplexity)
-    ensure_api_key()
+    if not PPLX_API_KEY:
+        return {
+            "reply": (
+                "Server configuration missing PPLX_API_KEY. "
+                "Please add it to the backend environment."
+            )
+        }
     user_name = extract_user_name(req.message) or "Bhai"
 
     payload = {
