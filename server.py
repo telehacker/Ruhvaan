@@ -7,6 +7,7 @@ from urllib.parse import quote
 import requests
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel
 from apitally.fastapi import ApitallyMiddleware
 
@@ -102,6 +103,19 @@ class ChatRequest(BaseModel):
 
 class ImageRequest(BaseModel):
     prompt: str
+
+
+@app.get("/")
+def root():
+    index_path = os.path.join(os.path.dirname(__file__), "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return PlainTextResponse("Ruhvaan API is running.", status_code=200)
+
+
+@app.get("/favicon.ico")
+def favicon():
+    return PlainTextResponse("", status_code=204)
 
 # ==========================================
 # 4. HELPER FUNCTIONS
