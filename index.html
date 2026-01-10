@@ -427,7 +427,7 @@
          */
         
         // --- CONFIGURATION ---
-        const API_URL = "https://ruhvaan-ai.onrender.com"; // Your Render Backend
+        const API_URL = window.location.origin; // Same-origin API (Vercel/Render)
         
         // DOM Elements
         const chatContainer = document.getElementById('chatContainer');
