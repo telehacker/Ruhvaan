@@ -1025,13 +1025,16 @@ INDEX_HTML = """<!DOCTYPE html>
                             password: loginPassword.value
                         })
                     });
-                    if (!response.ok) throw new Error('Login failed');
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.detail || 'Login failed');
+                    }
                     const data = await response.json();
                     setAuth(data.token, data.email);
                     hideLoginModal();
                     showTinyToast("Logged in");
                 } catch (error) {
-                    showLoginModal("Login failed. Check email/password.");
+                    showLoginModal(error.message || "Login failed. Check email/password.");
                 }
             });
         }
@@ -1047,13 +1050,16 @@ INDEX_HTML = """<!DOCTYPE html>
                             password: loginPassword.value
                         })
                     });
-                    if (!response.ok) throw new Error('Signup failed');
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.detail || 'Signup failed');
+                    }
                     const data = await response.json();
                     setAuth(data.token, data.email);
                     hideLoginModal();
                     showTinyToast("Account created");
                 } catch (error) {
-                    showLoginModal("Signup failed. Try a different email.");
+                    showLoginModal(error.message || "Signup failed. Try a different email.");
                 }
             });
         }

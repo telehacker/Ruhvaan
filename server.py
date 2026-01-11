@@ -205,7 +205,10 @@ def create_user(email: str, password: str) -> Tuple[Optional[int], str]:
         )
         response.raise_for_status()
         data = response.json()
-        user_id = data[0].get("id") if data else None
+        if isinstance(data, dict):
+            user_id = data.get("id")
+        else:
+            user_id = data[0].get("id") if data else None
         return user_id, password_hash
     with sqlite3.connect(CACHE_DB_PATH) as conn:
         cursor = conn.execute(
@@ -541,8 +544,13 @@ def register(req: AuthRequest, request: Request):
         raise HTTPException(status_code=409, detail="User already exists.")
     try:
         user_id, _ = create_user(email, req.password)
-    except (sqlite3.IntegrityError, requests.RequestException):
-        raise HTTPException(status_code=500, detail="Failed to create user.")
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=409, detail="User already exists.")
+    except requests.RequestException:
+        raise HTTPException(
+            status_code=500,
+            detail="Signup failed. Check Supabase tables and service role key.",
+        )
     if not user_id:
         raise HTTPException(status_code=500, detail="Failed to create user.")
     token = create_session(user_id)
