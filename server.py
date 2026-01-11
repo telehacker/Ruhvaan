@@ -7,7 +7,7 @@ from typing import Optional
 from urllib.parse import quote
 
 import requests
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from pydantic import BaseModel
@@ -282,3 +282,10 @@ def generate_image(req: ImageRequest):
         f"{safe_prompt}?width=768&height=768&seed={seed}"
     )
     return {"image_url": image_url}
+
+
+@app.post("/upload")
+async def upload_pdf(file: UploadFile = File(...)):
+    if file.content_type != "application/pdf":
+        raise HTTPException(status_code=400, detail="Only PDF uploads are supported.")
+    return {"reply": "PDF received. Parsing and search coming soon."}
