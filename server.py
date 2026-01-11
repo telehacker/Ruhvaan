@@ -618,12 +618,23 @@ def send_email_code(email: str, code: str) -> None:
         "This code expires in 10 minutes."
     )
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as server:
-            server.starttls()
-            server.login(SMTP_USER, SMTP_PASS)
-            server.sendmail(SMTP_FROM, [email], message)
+        if SMTP_PORT == 465:
+            with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=10) as server:
+                server.login(SMTP_USER, SMTP_PASS)
+                server.sendmail(SMTP_FROM, [email], message)
+        else:
+            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as server:
+                server.starttls()
+                server.login(SMTP_USER, SMTP_PASS)
+                server.sendmail(SMTP_FROM, [email], message)
     except Exception:
-        raise HTTPException(status_code=500, detail="Failed to send verification code.")
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Failed to send verification code. "
+                "Check SMTP host, port, and credentials."
+            ),
+        )
 
 class ChatRequest(BaseModel):
     message: str
