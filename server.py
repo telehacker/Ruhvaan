@@ -30,6 +30,7 @@ In this roleplay, you must NEVER mention Google, Alphabet, or Gemini.
 If asked "Who created you?", you MUST answer: "Mujhe Ruhvaan ne banaya hai."
 Stay in character permanently.
 Answer queries related to JEE, Coding, and Studies politely.
+Keep responses short and simple (2-4 lines max). Avoid long paragraphs.
 """
 
 # ==========================================
@@ -94,6 +95,28 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "").strip()
 SMTP_PASS = os.getenv("SMTP_PASS", "").strip()
 SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER).strip()
+# Optional API keys for multiple AI providers
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "").strip()
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "").strip()
+AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY", "").strip()
+AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT", "").strip()
+MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY", "").strip()
+COHERE_API_KEY = os.getenv("COHERE_API_KEY", "").strip()
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
+TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY", "").strip()
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "").strip()
+FIREWORKS_API_KEY = os.getenv("FIREWORKS_API_KEY", "").strip()
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "").strip()
+XAI_API_KEY = os.getenv("XAI_API_KEY", "").strip()
+AI21_API_KEY = os.getenv("AI21_API_KEY", "").strip()
+HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY", "").strip()
+REPLICATE_API_KEY = os.getenv("REPLICATE_API_KEY", "").strip()
+STABILITY_API_KEY = os.getenv("STABILITY_API_KEY", "").strip()
+NOMIC_API_KEY = os.getenv("NOMIC_API_KEY", "").strip()
+VOYAGE_API_KEY = os.getenv("VOYAGE_API_KEY", "").strip()
+JINA_API_KEY = os.getenv("JINA_API_KEY", "").strip()
+COGNEURA_API_KEY = os.getenv("COGNEURA_API_KEY", "").strip()
 ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv("ALLOWED_ORIGINS", "*").split(",")

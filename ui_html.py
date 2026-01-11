@@ -373,6 +373,16 @@ INDEX_HTML = """<!DOCTYPE html>
         .modal-title { display: flex; align-items: center; justify-content: space-between; }
         .modal h3 { margin-bottom: 8px; }
         .modal p { color: var(--text-muted); font-size: 14px; margin-bottom: 16px; }
+        .modal-close {
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 16px;
+            cursor: pointer;
+            padding: 4px;
+            line-height: 1;
+        }
+        .modal-close:hover { color: #fff; }
         .modal input {
             width: 100%;
             background: rgba(255,255,255,0.04);
@@ -675,6 +685,9 @@ INDEX_HTML = """<!DOCTYPE html>
         <div class="modal">
             <div class="modal-title">
                 <h3>Signup</h3>
+                <button class="modal-close" id="closeSignupIcon" aria-label="Close signup">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
             <p>Create your account with Gmail verification.</p>
             <input type="email" id="signupEmail" placeholder="Email (@gmail.com)" />
@@ -811,12 +824,14 @@ INDEX_HTML = """<!DOCTYPE html>
         const signupCode = document.getElementById('signupCode');
         const toggleSignupPassword = document.getElementById('toggleSignupPassword');
         const closeSignup = document.getElementById('closeSignup');
+        const closeSignupIcon = document.getElementById('closeSignupIcon');
         const signupError = document.getElementById('signupError');
         const openSignup = document.getElementById('openSignup');
         const openLogin = document.getElementById('openLogin');
 
         // State
         let isGenerating = false;
+        let shouldOfferPdfDownload = false;
 
         // Initialize
         window.onload = () => {
@@ -834,6 +849,8 @@ INDEX_HTML = """<!DOCTYPE html>
                 showLoginModal("Please login to continue chatting.");
                 return;
             }
+
+            shouldOfferPdfDownload = /(\bpdf\b|download)/i.test(text);
 
             // UI Updates
             isGenerating = true;
@@ -874,6 +891,7 @@ INDEX_HTML = """<!DOCTYPE html>
 
             } catch (error) {
                 removeElement(loadingId);
+                shouldOfferPdfDownload = false;
                 addMessageToUI("⚠️ Error: Server connection failed. Please check internet.", 'bot');
             } finally {
                 isGenerating = false;
@@ -903,7 +921,8 @@ INDEX_HTML = """<!DOCTYPE html>
                 formattedText = formattedText.replace(/\\n/g, '<br>');
             }
 
-            const downloadButton = sender === 'bot'
+            const shouldShowDownload = sender === 'bot' && shouldOfferPdfDownload;
+            const downloadButton = shouldShowDownload
                 ? `<button class="upload-btn" style="margin-top:10px;" onclick="downloadPdf(${JSON.stringify(text)})">
                         <i class="fas fa-file-pdf"></i> Download PDF
                    </button>`
@@ -919,6 +938,9 @@ INDEX_HTML = """<!DOCTYPE html>
             `;
             
             chatContainer.appendChild(div);
+            if (shouldShowDownload) {
+                shouldOfferPdfDownload = false;
+            }
             
             // Highlight Code Blocks
             div.querySelectorAll('pre code').forEach((block) => {
@@ -1251,6 +1273,9 @@ INDEX_HTML = """<!DOCTYPE html>
         }
         if (closeSignup) {
             closeSignup.addEventListener('click', hideSignupModal);
+        }
+        if (closeSignupIcon) {
+            closeSignupIcon.addEventListener('click', hideSignupModal);
         }
         if (openSignup) {
             openSignup.addEventListener('click', () => showSignupModal());
