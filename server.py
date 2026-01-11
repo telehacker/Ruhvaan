@@ -102,37 +102,40 @@ app.add_middleware(
 )
 
 def init_cache_db() -> None:
-    with sqlite3.connect(CACHE_DB_PATH) as conn:
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS qa_cache (
-                question TEXT PRIMARY KEY,
-                answer TEXT NOT NULL,
-                created_at REAL NOT NULL
+    try:
+        with sqlite3.connect(CACHE_DB_PATH) as conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS qa_cache (
+                    question TEXT PRIMARY KEY,
+                    answer TEXT NOT NULL,
+                    created_at REAL NOT NULL
+                )
+                """
             )
-            """
-        )
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                email TEXT UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL,
-                created_at REAL NOT NULL,
-                last_login REAL
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    created_at REAL NOT NULL,
+                    last_login REAL
+                )
+                """
             )
-            """
-        )
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS sessions (
-                token TEXT PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                created_at REAL NOT NULL,
-                FOREIGN KEY(user_id) REFERENCES users(id)
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS sessions (
+                    token TEXT PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    created_at REAL NOT NULL,
+                    FOREIGN KEY(user_id) REFERENCES users(id)
+                )
+                """
             )
-            """
-        )
+    except sqlite3.Error:
+        pass
 
 
 def cache_key(text: str) -> str:
@@ -377,7 +380,10 @@ def send_startup_notification() -> None:
 @app.on_event("startup")
 def on_startup() -> None:
     init_cache_db()
-    send_startup_notification()
+    try:
+        send_startup_notification()
+    except requests.RequestException:
+        pass
 
 
 def notify_login(event: str, email: str, ip: str | None = None) -> None:
