@@ -4,6 +4,7 @@ import os
 import random
 import secrets
 import sqlite3
+import smtplib
 import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -87,6 +88,11 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "").strip()
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER", "").strip()
+SMTP_PASS = os.getenv("SMTP_PASS", "").strip()
+SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER).strip()
 ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv("ALLOWED_ORIGINS", "*").split(",")
@@ -148,6 +154,15 @@ def init_cache_db() -> None:
                 )
                 """
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS auth_codes (
+                    email TEXT PRIMARY KEY,
+                    code_hash TEXT NOT NULL,
+                    expires_at REAL NOT NULL
+                )
+                """
+            )
     except sqlite3.Error:
         pass
 
@@ -175,6 +190,47 @@ def verify_password(password: str, password_hash: str) -> bool:
         return False
     candidate = hash_password(password, salt)
     return secrets.compare_digest(candidate, f"{salt}${expected}")
+
+
+def is_valid_gmail(email: str) -> bool:
+    return email.endswith("@gmail.com")
+
+
+def hash_code(code: str) -> str:
+    return hashlib.sha256(code.encode("utf-8")).hexdigest()
+
+
+def store_auth_code(email: str, code: str, ttl_seconds: int = 600) -> None:
+    expires_at = time.time() + ttl_seconds
+    code_hash = hash_code(code)
+    try:
+        with sqlite3.connect(CACHE_DB_PATH) as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO auth_codes (email, code_hash, expires_at)
+                VALUES (?, ?, ?)
+                """,
+                (email, code_hash, expires_at),
+            )
+    except sqlite3.Error:
+        pass
+
+
+def verify_auth_code(email: str, code: str) -> bool:
+    try:
+        with sqlite3.connect(CACHE_DB_PATH) as conn:
+            row = conn.execute(
+                "SELECT code_hash, expires_at FROM auth_codes WHERE email = ?",
+                (email,),
+            ).fetchone()
+    except sqlite3.Error:
+        return False
+    if not row:
+        return False
+    code_hash, expires_at = row
+    if time.time() > float(expires_at):
+        return False
+    return secrets.compare_digest(code_hash, hash_code(code))
 
 
 def supabase_headers() -> Dict[str, str]:
@@ -508,6 +564,26 @@ def notify_ai_usage(actor: str, message: str, ip: Optional[str] = None) -> None:
     except requests.RequestException:
         pass
 
+
+def send_email_code(email: str, code: str) -> None:
+    if not SMTP_HOST or not SMTP_USER or not SMTP_PASS or not SMTP_FROM:
+        raise HTTPException(status_code=500, detail="Email service not configured.")
+    message = (
+        "Subject: Ruhvaan AI Verification Code\r\n"
+        f"From: {SMTP_FROM}\r\n"
+        f"To: {email}\r\n\r\n"
+        "Your verification code is:\r\n"
+        f"{code}\r\n\r\n"
+        "This code expires in 10 minutes."
+    )
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as server:
+            server.starttls()
+            server.login(SMTP_USER, SMTP_PASS)
+            server.sendmail(SMTP_FROM, [email], message)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to send verification code.")
+
 class ChatRequest(BaseModel):
     message: str
 
@@ -519,6 +595,16 @@ class ImageRequest(BaseModel):
 class AuthRequest(BaseModel):
     email: str
     password: str
+
+
+class AuthCodeRequest(BaseModel):
+    email: str
+
+
+class AuthRegisterRequest(BaseModel):
+    email: str
+    password: str
+    code: str
 
 
 @app.get("/")
@@ -667,13 +753,19 @@ async def upload_pdf(request: Request, file: UploadFile = File(...)):
 
 
 @app.post("/auth/register")
-def register(req: AuthRequest, request: Request):
+def register(req: AuthRegisterRequest, request: Request):
     enforce_rate_limit(request)
     email = req.email.strip().lower()
     if not email or "@" not in email:
         raise HTTPException(status_code=400, detail="Valid email is required.")
+    if not is_valid_gmail(email):
+        raise HTTPException(status_code=400, detail="Only @gmail.com emails are allowed.")
     if len(req.password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters.")
+    if not req.code:
+        raise HTTPException(status_code=400, detail="Verification code is required.")
+    if not verify_auth_code(email, req.code.strip()):
+        raise HTTPException(status_code=400, detail="Invalid or expired verification code.")
     existing_id, _ = find_user_by_email(email)
     if existing_id:
         raise HTTPException(status_code=409, detail="User already exists.")
@@ -694,6 +786,8 @@ def register(req: AuthRequest, request: Request):
 def login(req: AuthRequest, request: Request):
     enforce_rate_limit(request)
     email = req.email.strip().lower()
+    if not is_valid_gmail(email):
+        raise HTTPException(status_code=400, detail="Only @gmail.com emails are allowed.")
     user_id, password_hash = find_user_by_email(email)
     if not user_id or not password_hash:
         raise HTTPException(status_code=401, detail="Invalid credentials.")
@@ -702,6 +796,18 @@ def login(req: AuthRequest, request: Request):
     token = create_session(user_id)
     notify_login("Login", email, get_client_ip(request))
     return {"token": token, "email": email}
+
+
+@app.post("/auth/request-code")
+def request_code(req: AuthCodeRequest, request: Request):
+    enforce_rate_limit(request)
+    email = req.email.strip().lower()
+    if not is_valid_gmail(email):
+        raise HTTPException(status_code=400, detail="Only @gmail.com emails are allowed.")
+    code = f"{random.randint(100000, 999999)}"
+    store_auth_code(email, code)
+    send_email_code(email, code)
+    return {"message": "Verification code sent."}
 
 
 @app.get("/auth/me")

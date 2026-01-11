@@ -10,6 +10,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
 
     <style>
@@ -584,11 +585,13 @@
                     <i class="fas fa-eye"></i>
                 </button>
             </div>
+            <input type="text" id="loginCode" placeholder="Verification code (for signup)" />
             <div class="modal-actions">
                 <button class="secondary" id="closeLogin">Cancel</button>
                 <button class="primary" id="loginBtn">Login</button>
             </div>
             <div class="modal-actions">
+                <button class="secondary" id="sendCodeBtn">Send Code</button>
                 <button class="secondary" id="signupBtn">Create Account</button>
             </div>
             <p id="loginError" style="color:#f87171; margin-top:10px; display:none;"></p>
@@ -628,7 +631,9 @@
         const loginModal = document.getElementById('loginModal');
         const loginEmail = document.getElementById('loginEmail');
         const loginPassword = document.getElementById('loginPassword');
+        const loginCode = document.getElementById('loginCode');
         const loginBtn = document.getElementById('loginBtn');
+        const sendCodeBtn = document.getElementById('sendCodeBtn');
         const signupBtn = document.getElementById('signupBtn');
         const closeLogin = document.getElementById('closeLogin');
         const loginError = document.getElementById('loginError');
@@ -703,6 +708,9 @@
         function addMessageToUI(text, sender) {
             const div = document.createElement('div');
             div.className = `msg-row ${sender}`;
+            const messageIndex = sender === 'user'
+                ? `Q${document.querySelectorAll('.msg-row.user').length + 1}: `
+                : '';
             
             // Markdown Parsing (Basic)
             let formattedText = text
@@ -719,12 +727,18 @@
                 formattedText = formattedText.replace(/\n/g, '<br>');
             }
 
+            const downloadButton = sender === 'bot'
+                ? `<button class="upload-btn" style="margin-top:10px;" onclick="downloadPdf(${JSON.stringify(text)})">
+                        <i class="fas fa-file-pdf"></i> Download PDF
+                   </button>`
+                : '';
             div.innerHTML = `
                 <div class="avatar">
                     ${sender === 'bot' ? '<i class="fas fa-cube"></i>' : '<i class="fas fa-user"></i>'}
                 </div>
                 <div class="bubble">
-                    ${formattedText}
+                    ${messageIndex}${formattedText}
+                    ${downloadButton}
                 </div>
             `;
             
@@ -1068,7 +1082,8 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             email: loginEmail.value.trim(),
-                            password: loginPassword.value
+                            password: loginPassword.value,
+                            code: loginCode.value.trim()
                         })
                     });
                     if (!response.ok) {
@@ -1093,6 +1108,33 @@
                     ? '<i class="fas fa-eye-slash"></i>'
                     : '<i class="fas fa-eye"></i>';
             });
+        }
+
+        if (sendCodeBtn) {
+            sendCodeBtn.addEventListener('click', async () => {
+                try {
+                    const response = await fetch(`${API_URL}/auth/request-code`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: loginEmail.value.trim() })
+                    });
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.detail || 'Failed to send code');
+                    }
+                    showTinyToast("Verification code sent to your email.");
+                } catch (error) {
+                    showLoginModal(error.message || "Failed to send code.");
+                }
+            });
+        }
+
+        function downloadPdf(text) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const lines = doc.splitTextToSize(text, 180);
+            doc.text(lines, 10, 10);
+            doc.save('ruhvaan-answer.pdf');
         }
         
         userInput.addEventListener('keydown', (e) => {
