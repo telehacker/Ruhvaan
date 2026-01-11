@@ -631,7 +631,23 @@ def send_email_code(email: str, code: str) -> None:
                 return
             except requests.RequestException:
                 pass
-        raise HTTPException(status_code=500, detail="Email service not configured.")
+        missing_vars = []
+        if not SMTP_HOST:
+            missing_vars.append("SMTP_HOST")
+        if not SMTP_USER:
+            missing_vars.append("SMTP_USER")
+        if not SMTP_PASS:
+            missing_vars.append("SMTP_PASS")
+        if not SMTP_FROM:
+            missing_vars.append("SMTP_FROM")
+        missing_hint = ", ".join(missing_vars) if missing_vars else "SMTP configuration"
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Email service not configured. Missing: "
+                f"{missing_hint}. Set SMTP_* env vars or configure Telegram fallback."
+            ),
+        )
     message = (
         "Subject: Ruhvaan AI Verification Code\r\n"
         f"From: {SMTP_FROM}\r\n"
