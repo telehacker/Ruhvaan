@@ -4,3 +4,4 @@ pydantic
 gunicorn
 requests
 python-multipart
+PyPDF2

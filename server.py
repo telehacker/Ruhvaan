@@ -1,4 +1,5 @@
 import hashlib
+from io import BytesIO
 import os
 import random
 import secrets
@@ -13,6 +14,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from pydantic import BaseModel
+from PyPDF2 import PdfReader
 
 from ui_html import INDEX_HTML
 
@@ -134,6 +136,18 @@ def init_cache_db() -> None:
                 )
                 """
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS pdf_docs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    filename TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    created_at REAL NOT NULL,
+                    FOREIGN KEY(user_id) REFERENCES users(id)
+                )
+                """
+            )
     except sqlite3.Error:
         pass
 
@@ -205,12 +219,16 @@ def create_user(email: str, password: str) -> Tuple[Optional[int], str]:
                 timeout=5,
             )
             response.raise_for_status()
-            data = response.json()
+            try:
+                data = response.json()
+            except ValueError:
+                data = []
             if isinstance(data, dict):
                 user_id = data.get("id")
             else:
                 user_id = data[0].get("id") if data else None
-            return user_id, password_hash
+            if user_id:
+                return user_id, password_hash
         except requests.RequestException:
             pass
     with sqlite3.connect(CACHE_DB_PATH) as conn:
@@ -307,6 +325,62 @@ def get_user_by_token(token: str) -> Optional[Tuple[int, str]]:
             (token,),
         ).fetchone()
     return (row[0], row[1]) if row else None
+
+
+def save_pdf_doc(user_id: int, filename: str, content: str) -> None:
+    created_at = time.time()
+    if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
+        try:
+            requests.post(
+                f"{SUPABASE_URL}/rest/v1/pdf_docs",
+                headers=supabase_headers(),
+                json={
+                    "user_id": user_id,
+                    "filename": filename,
+                    "content": content,
+                    "created_at": created_at,
+                },
+                timeout=10,
+            ).raise_for_status()
+            return
+        except requests.RequestException:
+            pass
+    try:
+        with sqlite3.connect(CACHE_DB_PATH) as conn:
+            conn.execute(
+                """
+                INSERT INTO pdf_docs (user_id, filename, content, created_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (user_id, filename, content, created_at),
+            )
+    except sqlite3.Error:
+        return
+
+
+def get_pdf_docs(user_id: int) -> List[Dict[str, str]]:
+    if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
+        try:
+            response = requests.get(
+                f"{SUPABASE_URL}/rest/v1/pdf_docs",
+                headers=supabase_headers(),
+                params={"user_id": f"eq.{user_id}", "select": "filename,content"},
+                timeout=10,
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data or []
+        except requests.RequestException:
+            pass
+    try:
+        with sqlite3.connect(CACHE_DB_PATH) as conn:
+            rows = conn.execute(
+                "SELECT filename, content FROM pdf_docs WHERE user_id = ?",
+                (user_id,),
+            ).fetchall()
+        return [{"filename": row[0], "content": row[1]} for row in rows]
+    except sqlite3.Error:
+        return []
 
 
 def get_cached_reply(message: str) -> Optional[str]:
@@ -415,6 +489,25 @@ def notify_login(event: str, email: str, ip: Optional[str] = None) -> None:
         except requests.RequestException:
             pass
 
+
+def notify_ai_usage(actor: str, message: str, ip: Optional[str] = None) -> None:
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        return
+    summary = message.strip().replace("\n", " ")
+    summary = summary[:500] + ("…" if len(summary) > 500 else "")
+    text = f"AI used by {actor}"
+    if ip:
+        text = f"{text} ({ip})"
+    text = f"{text}\nMessage: {summary}"
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+            json={"chat_id": TELEGRAM_CHAT_ID, "text": text},
+            timeout=5,
+        )
+    except requests.RequestException:
+        pass
+
 class ChatRequest(BaseModel):
     message: str
 
@@ -460,6 +553,8 @@ def extract_user_name(message: str) -> Optional[str]:
 @app.post("/chat")
 def chat(req: ChatRequest, request: Request):
     enforce_rate_limit(request)
+    token = request.headers.get("authorization", "").removeprefix("Bearer ").strip()
+    user = get_user_by_token(token)
     # Step 1: Check GitHub Database for Links
     db_reply = find_direct_link(req.message)
     if db_reply:
@@ -478,6 +573,15 @@ def chat(req: ChatRequest, request: Request):
             )
         }
     user_name = extract_user_name(req.message) or "Bhai"
+    actor = user[1] if user else f"guest:{get_client_ip(request)}"
+    notify_ai_usage(actor, req.message, get_client_ip(request))
+
+    pdf_context = ""
+    if user:
+        docs = get_pdf_docs(user[0])
+        if docs:
+            combined = "\n\n".join(doc["content"] for doc in docs)
+            pdf_context = combined[:4000]
 
     payload = {
         "model": PPLX_MODEL,
@@ -485,7 +589,11 @@ def chat(req: ChatRequest, request: Request):
             {"role": "system", "content": SYSTEM_PROMPT.strip()},
             {
                 "role": "user",
-                "content": f"User Name: {user_name}\nUser Message: {req.message}",
+                "content": (
+                    f"User Name: {user_name}\n"
+                    f"User Message: {req.message}\n"
+                    f"{'PDF Context:\\n' + pdf_context if pdf_context else ''}"
+                ),
             },
         ],
         "temperature": 0.7,
@@ -536,11 +644,26 @@ def generate_image(req: ImageRequest):
 async def upload_pdf(request: Request, file: UploadFile = File(...)):
     enforce_rate_limit(request)
     token = request.headers.get("authorization", "").removeprefix("Bearer ").strip()
-    if not get_user_by_token(token):
+    user = get_user_by_token(token)
+    if not user:
         raise HTTPException(status_code=401, detail="Login required to upload PDFs.")
     if file.content_type != "application/pdf":
         raise HTTPException(status_code=400, detail="Only PDF uploads are supported.")
-    return {"reply": "PDF received. Parsing and search coming soon."}
+    content = await file.read()
+    reader = PdfReader(BytesIO(content))
+    text_chunks = []
+    for page in reader.pages:
+        page_text = page.extract_text() or ""
+        if page_text:
+            text_chunks.append(page_text)
+    full_text = "\n".join(text_chunks).strip()
+    if not full_text:
+        raise HTTPException(status_code=400, detail="Could not read text from this PDF.")
+    save_pdf_doc(user[0], file.filename or "document.pdf", full_text)
+    notify_ai_usage(user[1], f"Uploaded PDF: {file.filename or 'document.pdf'}", get_client_ip(request))
+    return {
+        "reply": "PDF uploaded successfully. Ask a question and I will use it for answers."
+    }
 
 
 @app.post("/auth/register")
