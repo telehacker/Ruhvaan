@@ -631,9 +631,9 @@ def send_email_code(email: str, code: str) -> None:
         raise HTTPException(
             status_code=500,
             detail=(
-                "Failed to send verification code. Check SMTP host, port, and "
-                "credentials. For Gmail, use an App Password and port 587 "
-                "(STARTTLS) or 465 (SSL)."
+                "Failed to send verification code. Verify SMTP host, port, and "
+                "credentials. For Gmail, use an App Password (2FA) with port "
+                "587 (STARTTLS) or 465 (SSL)."
             ),
         )
 
