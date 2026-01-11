@@ -241,6 +241,19 @@
             background: rgba(16, 185, 129, 0.1); padding: 5px 12px; border-radius: 20px;
             border: 1px solid rgba(16, 185, 129, 0.2);
         }
+        .auth-pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+        .auth-pill strong { color: #fff; font-weight: 600; }
         .status-dot { width: 6px; height: 6px; background: var(--success); border-radius: 50%; box-shadow: 0 0 8px var(--success); }
 
         /* Chat Area */
@@ -336,6 +349,52 @@
         }
         .send-btn:hover { background: var(--primary); color: #fff; transform: scale(1.1) rotate(-10deg); }
         .send-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; background: #333; color: #555; }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 80;
+            padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            width: min(420px, 100%);
+            background: #0b0b10;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 22px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+        .modal h3 { margin-bottom: 8px; }
+        .modal p { color: var(--text-muted); font-size: 14px; margin-bottom: 16px; }
+        .modal input {
+            width: 100%;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            color: #fff;
+            padding: 10px 12px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .modal-actions button {
+            flex: 1;
+            border-radius: 10px;
+            padding: 10px 12px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .modal-actions .primary { background: var(--primary); color: #fff; }
+        .modal-actions .secondary { background: rgba(255,255,255,0.06); color: #fff; border: 1px solid var(--border); }
 
         /* Mascot (small character inside chatbox) */
         .mascot {
@@ -458,8 +517,14 @@
                 </div>
                 <div class="header-title">Ruhvaan Core v1.0</div>
             </div>
-            <div class="status-badge">
-                <span class="status-dot"></span> ONLINE
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div class="status-badge">
+                    <span class="status-dot"></span> ONLINE
+                </div>
+                <div class="auth-pill" id="authPill">
+                    <i class="fas fa-user"></i>
+                    <span id="authPillText">Guest</span>
+                </div>
             </div>
         </div>
 
@@ -494,6 +559,23 @@
     <audio id="snd-send" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"></audio>
     <audio id="snd-receive" src="https://assets.mixkit.co/active_storage/sfx/2572/2572-preview.mp3"></audio>
 
+    <div class="modal-overlay" id="loginModal">
+        <div class="modal">
+            <h3>Login required</h3>
+            <p>Login to continue chatting and upload PDFs.</p>
+            <input type="email" id="loginEmail" placeholder="Email" />
+            <input type="password" id="loginPassword" placeholder="Password" />
+            <div class="modal-actions">
+                <button class="secondary" id="closeLogin">Cancel</button>
+                <button class="primary" id="loginBtn">Login</button>
+            </div>
+            <div class="modal-actions">
+                <button class="secondary" id="signupBtn">Create Account</button>
+            </div>
+            <p id="loginError" style="color:#f87171; margin-top:10px; display:none;"></p>
+        </div>
+    </div>
+
     <script>
         /**
          * RUHVAAN AI ENGINE v1.0 (Modified)
@@ -522,12 +604,24 @@
         const newChatBtn = document.getElementById('newChatBtn');
         const pdfBtn = document.getElementById('pdfBtn');
         const pdfInput = document.getElementById('pdfInput');
+        const authPill = document.getElementById('authPill');
+        const authPillText = document.getElementById('authPillText');
+        const loginModal = document.getElementById('loginModal');
+        const loginEmail = document.getElementById('loginEmail');
+        const loginPassword = document.getElementById('loginPassword');
+        const loginBtn = document.getElementById('loginBtn');
+        const signupBtn = document.getElementById('signupBtn');
+        const closeLogin = document.getElementById('closeLogin');
+        const loginError = document.getElementById('loginError');
 
         // State
         let isGenerating = false;
 
         // Initialize
-        window.onload = loadHistory;
+        window.onload = () => {
+            loadHistory();
+            refreshAuthUI();
+        };
 
         // --- CORE FUNCTIONS ---
 
@@ -535,6 +629,10 @@
         async function handleSend() {
             const text = userInput.value.trim();
             if (!text || isGenerating) return;
+            if (!isLoggedIn() && getGuestCount() >= 3) {
+                showLoginModal("Please login to continue chatting.");
+                return;
+            }
 
             // UI Updates
             isGenerating = true;
@@ -552,9 +650,12 @@
 
             try {
                 // API Call
+                const headers = { 'Content-Type': 'application/json' };
+                const token = getAuthToken();
+                if (token) headers.Authorization = `Bearer ${token}`;
                 const response = await fetch(`${API_URL}/chat`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers,
                     body: JSON.stringify({ message: text })
                 });
 
@@ -567,6 +668,7 @@
                 await typeWriterEffect(data.reply); // Typing Effect
                 
                 saveToHistory(data.reply, 'bot');
+                if (!isLoggedIn()) incrementGuestCount();
                 playSound('receive');
 
             } catch (error) {
@@ -725,6 +827,65 @@
             location.reload();
         }
 
+        function getGuestCount() {
+            return parseInt(localStorage.getItem('ruhvaan_guest_count') || '0', 10);
+        }
+
+        function incrementGuestCount() {
+            const next = getGuestCount() + 1;
+            localStorage.setItem('ruhvaan_guest_count', String(next));
+            if (next >= 3) {
+                showLoginModal("You have reached the guest limit. Please login.");
+            }
+        }
+
+        function getAuthToken() {
+            return localStorage.getItem('ruhvaan_token') || '';
+        }
+
+        function isLoggedIn() {
+            return Boolean(getAuthToken());
+        }
+
+        function setAuth(token, email) {
+            localStorage.setItem('ruhvaan_token', token);
+            localStorage.setItem('ruhvaan_email', email);
+            localStorage.removeItem('ruhvaan_guest_count');
+            refreshAuthUI();
+        }
+
+        function clearAuth() {
+            localStorage.removeItem('ruhvaan_token');
+            localStorage.removeItem('ruhvaan_email');
+            refreshAuthUI();
+        }
+
+        function refreshAuthUI() {
+            const email = localStorage.getItem('ruhvaan_email');
+            if (email) {
+                authPillText.innerHTML = `<strong>${email}</strong>`;
+                authPill.title = "Click to logout";
+            } else {
+                authPillText.textContent = "Guest";
+                authPill.title = "Click to login";
+            }
+        }
+
+        function showLoginModal(message) {
+            if (message) {
+                loginError.style.display = 'block';
+                loginError.textContent = message;
+            } else {
+                loginError.style.display = 'none';
+            }
+            loginModal.classList.add('active');
+        }
+
+        function hideLoginModal() {
+            loginModal.classList.remove('active');
+            loginError.style.display = 'none';
+        }
+
         // --- NEW: Non-blocking module animation (replaces alert popups) ---
         function triggerModuleAnim(el, moduleName) {
             // create small animated dot inside the menu item to show feedback
@@ -810,13 +971,20 @@
             pdfInput.addEventListener('change', async () => {
                 const file = pdfInput.files?.[0];
                 if (!file) return;
+                if (!isLoggedIn()) {
+                    pdfInput.value = '';
+                    showLoginModal("Login required to upload PDFs.");
+                    return;
+                }
                 const formData = new FormData();
                 formData.append('file', file);
                 addMessageToUI(`📎 Uploaded: ${file.name}`, 'user');
                 const loadingId = addLoadingIndicator();
                 try {
+                    const token = getAuthToken();
                     const response = await fetch(`${API_URL}/upload`, {
                         method: 'POST',
+                        headers: token ? { Authorization: `Bearer ${token}` } : {},
                         body: formData
                     });
                     if (!response.ok) throw new Error('Upload failed');
@@ -828,6 +996,65 @@
                     addMessageToUI("⚠️ PDF upload failed. Please try again.", 'bot');
                 } finally {
                     pdfInput.value = '';
+                }
+            });
+        }
+
+        if (authPill) {
+            authPill.addEventListener('click', () => {
+                if (isLoggedIn()) {
+                    clearAuth();
+                    showTinyToast("Logged out");
+                } else {
+                    showLoginModal();
+                }
+            });
+        }
+
+        if (closeLogin) {
+            closeLogin.addEventListener('click', hideLoginModal);
+        }
+
+        if (loginBtn) {
+            loginBtn.addEventListener('click', async () => {
+                try {
+                    const response = await fetch(`${API_URL}/auth/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email: loginEmail.value.trim(),
+                            password: loginPassword.value
+                        })
+                    });
+                    if (!response.ok) throw new Error('Login failed');
+                    const data = await response.json();
+                    setAuth(data.token, data.email);
+                    hideLoginModal();
+                    showTinyToast("Logged in");
+                } catch (error) {
+                    showLoginModal("Login failed. Check email/password.");
+                }
+            });
+        }
+
+        if (signupBtn) {
+            signupBtn.addEventListener('click', async () => {
+                try {
+                    const response = await fetch(`${API_URL}/auth/register`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email: loginEmail.value.trim(),
+                            password: loginPassword.value
+                        })
+                    });
+                    if (!response.ok) throw new Error('Signup failed');
+                    const data = await response.json();
+                    setAuth(data.token, data.email);
+                    hideLoginModal();
+                    showTinyToast("Account created");
+                } catch (error) {
+                    showLoginModal("Signup failed. Try a different email.");
                 }
             });
         }
