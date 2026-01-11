@@ -446,6 +446,41 @@ INDEX_HTML = """<!DOCTYPE html>
         .plan-card h4 { margin-bottom: 8px; }
         .plan-price { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
         .plan-benefits { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+        .feature-stack {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.02);
+        }
+        .feature-group { margin-bottom: 16px; }
+        .feature-group:last-child { margin-bottom: 0; }
+        .feature-group h4 {
+            margin-bottom: 8px;
+            font-size: 15px;
+            letter-spacing: 0.2px;
+        }
+        .feature-list {
+            list-style: none;
+            display: grid;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        .feature-list li {
+            display: flex;
+            gap: 8px;
+        }
+        .feature-list li::before {
+            content: "•";
+            color: var(--primary);
+        }
+        .feature-note {
+            margin-top: 12px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        .feature-note strong { color: #fff; }
         /* Mascot (small character inside chatbox) */
         .mascot {
             position: absolute;
@@ -695,6 +730,34 @@ INDEX_HTML = """<!DOCTYPE html>
                     <div class="plan-price">₹1299/mo</div>
                     <div class="plan-benefits">Dedicated support, custom tools, SLA access.</div>
                 </div>
+            </div>
+            <div class="feature-stack">
+                <div class="feature-group">
+                    <h4>JEE Superpowers</h4>
+                    <ul class="feature-list">
+                        <li>Doubt Predictor: past chats analyze → weak topics predict → personalized PYQs/micro-lessons.</li>
+                        <li>Adaptive Mock Tests: JEE pattern, real-time difficulty adjust, error heatmap + one-click revise.</li>
+                        <li>Voice Tutor: Hindi/English voice input, emotion detect → motivation + guided solving.</li>
+                    </ul>
+                </div>
+                <div class="feature-group">
+                    <h4>Developer Tools</h4>
+                    <ul class="feature-list">
+                        <li>Codebase Analyzer: GitHub link → bugs/security scan + Sonar research → optimization suggestions.</li>
+                        <li>Live Debugger: error paste → step-by-step trace + sandbox run → proven fixes.</li>
+                        <li>Project Blueprint: “Quiz app banao” → complete Flask + SQL + Render deploy ready.</li>
+                    </ul>
+                </div>
+                <div class="feature-group">
+                    <h4>Magic Features</h4>
+                    <ul class="feature-list">
+                        <li>Emotional Coach: stress detect → motivational quotes + smart study breaks.</li>
+                        <li>Cross-Platform Sync: Telegram ↔ Web context carry over.</li>
+                        <li>Secret Commands: /nano (10-sec answers), /guru (strict mode).</li>
+                    </ul>
+                </div>
+                <p class="feature-note"><strong>Priority:</strong> Doubt Predictor → Voice Tutor → Code Analyzer.</p>
+                <p class="feature-note"><strong>Edge:</strong> No gamification, pure productivity + personalization.</p>
             </div>
             <div class="modal-actions">
                 <button class="secondary" onclick="hidePlansModal()">Close</button>
