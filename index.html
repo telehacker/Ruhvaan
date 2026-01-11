@@ -166,6 +166,17 @@
         }
         .menu-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
         .menu-item.active { background: var(--primary-dim); color: var(--primary); border: 1px solid rgba(59,130,246,0.2); }
+        .coming-soon {
+            margin-left: auto;
+            padding: 2px 8px;
+            font-size: 10px;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: var(--text-muted);
+        }
 
         /* temporary animated indicator inside menu item */
         .menu-item .module-anim {
@@ -392,9 +403,11 @@
             </div>
             <div class="menu-item" onclick="triggerModuleAnim(this, 'Generate Images')">
                 <i class="fas fa-image"></i> Generate Images
+                <span class="coming-soon">Coming Soon</span>
             </div>
             <div class="menu-item" onclick="triggerModuleAnim(this, 'Voice Mode')">
                 <i class="fas fa-microphone"></i> Voice Mode
+                <span class="coming-soon">Coming Soon</span>
             </div>
             <div class="menu-item" onclick="clearStorage()">
                 <i class="fas fa-trash"></i> Clear Memory
@@ -694,7 +707,11 @@
             animateAction(newChatBtn);
 
             // optional: show a small ephemeral toast near header (non-blocking)
-            showTinyToast(`${moduleName} loading...`);
+            const comingSoonModules = new Set(['Generate Images', 'Voice Mode']);
+            const toastMessage = comingSoonModules.has(moduleName)
+                ? `${moduleName} coming soon...`
+                : `${moduleName} loading...`;
+            showTinyToast(toastMessage);
 
             // remove the dot after animation
             setTimeout(() => {

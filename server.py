@@ -1,5 +1,6 @@
 import os
 import random
+import sqlite3
 import time
 from pathlib import Path
 from typing import Optional
@@ -76,6 +77,10 @@ def find_direct_link(message: str):
 PPLX_API_URL = "https://api.perplexity.ai/chat/completions"
 PPLX_API_KEY = os.getenv("PPLX_API_KEY", "").strip()
 PPLX_MODEL = os.getenv("PPLX_MODEL", "sonar")
+CACHE_DB_PATH = os.getenv("CACHE_DB_PATH", "cache.db")
+STARTUP_WEBHOOK_URL = os.getenv("STARTUP_WEBHOOK_URL", "").strip()
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "").strip()
 ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv("ALLOWED_ORIGINS", "*").split(",")
@@ -91,6 +96,82 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+def init_cache_db() -> None:
+    with sqlite3.connect(CACHE_DB_PATH) as conn:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS qa_cache (
+                question TEXT PRIMARY KEY,
+                answer TEXT NOT NULL,
+                created_at REAL NOT NULL
+            )
+            """
+        )
+
+
+def cache_key(text: str) -> str:
+    return " ".join(text.strip().lower().split())
+
+
+def get_cached_reply(message: str) -> Optional[str]:
+    key = cache_key(message)
+    if not key:
+        return None
+    try:
+        with sqlite3.connect(CACHE_DB_PATH) as conn:
+            row = conn.execute(
+                "SELECT answer FROM qa_cache WHERE question = ?",
+                (key,),
+            ).fetchone()
+    except sqlite3.Error:
+        return None
+    return row[0] if row else None
+
+
+def save_cached_reply(question: str, answer: str) -> None:
+    key = cache_key(question)
+    if not key or not answer:
+        return
+    try:
+        with sqlite3.connect(CACHE_DB_PATH) as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO qa_cache (question, answer, created_at)
+                VALUES (?, ?, ?)
+                """,
+                (key, answer, time.time()),
+            )
+    except sqlite3.Error:
+        return
+
+
+def send_startup_notification() -> None:
+    message = "Ruhvaan bot started successfully."
+    if STARTUP_WEBHOOK_URL:
+        try:
+            requests.post(
+                STARTUP_WEBHOOK_URL,
+                json={"text": message},
+                timeout=5,
+            )
+        except requests.RequestException:
+            pass
+    if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
+        try:
+            requests.post(
+                f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+                json={"chat_id": TELEGRAM_CHAT_ID, "text": message},
+                timeout=5,
+            )
+        except requests.RequestException:
+            pass
+
+
+@app.on_event("startup")
+def on_startup() -> None:
+    init_cache_db()
+    send_startup_notification()
 
 class ChatRequest(BaseModel):
     message: str
@@ -136,6 +217,10 @@ def chat(req: ChatRequest):
     if db_reply:
         return {"reply": db_reply}
 
+    cached_reply = get_cached_reply(req.message)
+    if cached_reply:
+        return {"reply": cached_reply}
+
     # Step 2: Ask AI (Perplexity)
     if not PPLX_API_KEY:
         return {
@@ -180,6 +265,7 @@ def chat(req: ChatRequest):
 
     # Branding
     reply = reply.replace("Google", "Ruhvaan").replace("Gemini", "Ruhvaan AI")
+    save_cached_reply(req.message, reply)
     return {"reply": reply}
 
 

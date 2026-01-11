@@ -10,6 +10,7 @@
     { "src": "/", "dest": "/api/index.py" },
     { "src": "/chat", "dest": "/api/index.py" },
     { "src": "/image", "dest": "/api/index.py" },
-    { "src": "/api/(.*)", "dest": "/api/index.py" }
+    { "src": "/api/(.*)", "dest": "/api/index.py" },
+    { "src": "/(.*)", "dest": "/api/index.py" }
   ]
 }
