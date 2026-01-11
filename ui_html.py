@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+INDEX_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -409,7 +409,6 @@
         }
         .modal-actions .primary { background: var(--primary); color: #fff; }
         .modal-actions .secondary { background: rgba(255,255,255,0.06); color: #fff; border: 1px solid var(--border); }
-
         /* Mascot (small character inside chatbox) */
         .mascot {
             position: absolute;
@@ -708,15 +707,15 @@
             let formattedText = text
                 .replace(/</g, "&lt;")
                 .replace(/>/g, "&gt;")
-                .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+                .replace(/\\*\\*(.*?)\\*\\*/g, '<b>$1</b>')
                 .replace(/`([^`]+)`/g, '<code style="background:#222; padding:2px 5px; border-radius:4px; color:#ff79c6">$1</code>');
 
             // Code Block Detection
             if (formattedText.includes('```')) {
-                formattedText = formattedText.replace(/```(\w+)?\n([\s\S]*?)```/g, 
+                formattedText = formattedText.replace(/```(\\w+)?\\n([\\s\\S]*?)```/g, 
                     '<pre><code class="language-$1">$2</code></pre>');
             } else {
-                formattedText = formattedText.replace(/\n/g, '<br>');
+                formattedText = formattedText.replace(/\\n/g, '<br>');
             }
 
             div.innerHTML = `
@@ -769,7 +768,7 @@
                         setTimeout(type, speed);
                     } else {
                         // After typing, replace textContent with HTML to render Markdown
-                        bubble.innerHTML = text.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+                        bubble.innerHTML = text.replace(/\\n/g, '<br>').replace(/\\*\\*(.*?)\\*\\*/g, '<b>$1</b>');
                         resolve();
                     }
                 }
@@ -825,7 +824,7 @@
             const history = JSON.parse(localStorage.getItem('ruhvaan_chat') || '[]');
             if(history.length === 0) {
                 // Default Welcome Message
-                addMessageToUI("**Hello! Main Ruhvaan hoon.**\nSystem online and ready. Main aapki kya madad karoon?", 'bot');
+                addMessageToUI("**Hello! Main Ruhvaan hoon.**\\nSystem online and ready. Main aapki kya madad karoon?", 'bot');
             } else {
                 history.forEach(msg => addMessageToUI(msg.text, msg.sender));
             }
@@ -1105,3 +1104,4 @@
     </script>
 </body>
 </html>
+"""
