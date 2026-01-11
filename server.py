@@ -77,7 +77,7 @@ def find_direct_link(message: str):
 PPLX_API_URL = "https://api.perplexity.ai/chat/completions"
 PPLX_API_KEY = os.getenv("PPLX_API_KEY", "").strip()
 PPLX_MODEL = os.getenv("PPLX_MODEL", "sonar")
-CACHE_DB_PATH = os.getenv("CACHE_DB_PATH", "cache.db")
+CACHE_DB_PATH = os.getenv("CACHE_DB_PATH", "/tmp/cache.db")
 STARTUP_WEBHOOK_URL = os.getenv("STARTUP_WEBHOOK_URL", "").strip()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "").strip()
