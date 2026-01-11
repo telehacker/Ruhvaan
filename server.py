@@ -5,7 +5,7 @@ import secrets
 import sqlite3
 import time
 from pathlib import Path
-from typing import Optional
+from typing import Dict, List, Optional, Tuple
 from urllib.parse import quote
 
 import requests
@@ -142,7 +142,7 @@ def cache_key(text: str) -> str:
     return " ".join(text.strip().lower().split())
 
 
-def hash_password(password: str, salt: str | None = None) -> str:
+def hash_password(password: str, salt: Optional[str] = None) -> str:
     if salt is None:
         salt = secrets.token_hex(16)
     digest = hashlib.pbkdf2_hmac(
@@ -163,7 +163,7 @@ def verify_password(password: str, password_hash: str) -> bool:
     return secrets.compare_digest(candidate, f"{salt}${expected}")
 
 
-def supabase_headers() -> dict[str, str]:
+def supabase_headers() -> Dict[str, str]:
     return {
         "apikey": SUPABASE_SERVICE_ROLE_KEY,
         "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
@@ -180,7 +180,7 @@ def get_client_ip(request: Request) -> str:
 
 RATE_LIMIT_WINDOW_S = 60
 RATE_LIMIT_MAX = 20
-_RATE_LIMIT_BUCKET: dict[str, list[float]] = {}
+_RATE_LIMIT_BUCKET: Dict[str, List[float]] = {}
 
 
 def enforce_rate_limit(request: Request) -> None:
@@ -193,7 +193,7 @@ def enforce_rate_limit(request: Request) -> None:
     _RATE_LIMIT_BUCKET[ip] = bucket
 
 
-def create_user(email: str, password: str) -> tuple[int | None, str]:
+def create_user(email: str, password: str) -> Tuple[Optional[int], str]:
     password_hash = hash_password(password)
     created_at = time.time()
     if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
@@ -215,7 +215,7 @@ def create_user(email: str, password: str) -> tuple[int | None, str]:
         return cursor.lastrowid, password_hash
 
 
-def find_user_by_email(email: str) -> tuple[int | None, str | None]:
+def find_user_by_email(email: str) -> Tuple[Optional[int], Optional[str]]:
     if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
         response = requests.get(
             f"{SUPABASE_URL}/rest/v1/users",
@@ -255,7 +255,7 @@ def create_session(user_id: int) -> str:
     return token
 
 
-def get_user_by_token(token: str) -> Optional[tuple[int, str]]:
+def get_user_by_token(token: str) -> Optional[Tuple[int, str]]:
     if not token:
         return None
     if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
@@ -386,7 +386,7 @@ def on_startup() -> None:
         pass
 
 
-def notify_login(event: str, email: str, ip: str | None = None) -> None:
+def notify_login(event: str, email: str, ip: Optional[str] = None) -> None:
     message = f"{event}: {email}"
     if ip:
         message = f"{message} ({ip})"
