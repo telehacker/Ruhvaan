@@ -197,19 +197,22 @@ def create_user(email: str, password: str) -> Tuple[Optional[int], str]:
     password_hash = hash_password(password)
     created_at = time.time()
     if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
-        response = requests.post(
-            f"{SUPABASE_URL}/rest/v1/users",
-            headers=supabase_headers(),
-            json={"email": email, "password_hash": password_hash, "created_at": created_at},
-            timeout=5,
-        )
-        response.raise_for_status()
-        data = response.json()
-        if isinstance(data, dict):
-            user_id = data.get("id")
-        else:
-            user_id = data[0].get("id") if data else None
-        return user_id, password_hash
+        try:
+            response = requests.post(
+                f"{SUPABASE_URL}/rest/v1/users",
+                headers=supabase_headers(),
+                json={"email": email, "password_hash": password_hash, "created_at": created_at},
+                timeout=5,
+            )
+            response.raise_for_status()
+            data = response.json()
+            if isinstance(data, dict):
+                user_id = data.get("id")
+            else:
+                user_id = data[0].get("id") if data else None
+            return user_id, password_hash
+        except requests.RequestException:
+            pass
     with sqlite3.connect(CACHE_DB_PATH) as conn:
         cursor = conn.execute(
             "INSERT INTO users (email, password_hash, created_at) VALUES (?, ?, ?)",
@@ -220,17 +223,20 @@ def create_user(email: str, password: str) -> Tuple[Optional[int], str]:
 
 def find_user_by_email(email: str) -> Tuple[Optional[int], Optional[str]]:
     if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
-        response = requests.get(
-            f"{SUPABASE_URL}/rest/v1/users",
-            headers=supabase_headers(),
-            params={"email": f"eq.{email}", "select": "id,password_hash"},
-            timeout=5,
-        )
-        response.raise_for_status()
-        data = response.json()
-        if not data:
-            return None, None
-        return data[0].get("id"), data[0].get("password_hash")
+        try:
+            response = requests.get(
+                f"{SUPABASE_URL}/rest/v1/users",
+                headers=supabase_headers(),
+                params={"email": f"eq.{email}", "select": "id,password_hash"},
+                timeout=5,
+            )
+            response.raise_for_status()
+            data = response.json()
+            if not data:
+                return None, None
+            return data[0].get("id"), data[0].get("password_hash")
+        except requests.RequestException:
+            pass
     with sqlite3.connect(CACHE_DB_PATH) as conn:
         row = conn.execute(
             "SELECT id, password_hash FROM users WHERE email = ?",
@@ -243,13 +249,16 @@ def create_session(user_id: int) -> str:
     token = secrets.token_hex(24)
     created_at = time.time()
     if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
-        requests.post(
-            f"{SUPABASE_URL}/rest/v1/sessions",
-            headers=supabase_headers(),
-            json={"token": token, "user_id": user_id, "created_at": created_at},
-            timeout=5,
-        ).raise_for_status()
-        return token
+        try:
+            requests.post(
+                f"{SUPABASE_URL}/rest/v1/sessions",
+                headers=supabase_headers(),
+                json={"token": token, "user_id": user_id, "created_at": created_at},
+                timeout=5,
+            ).raise_for_status()
+            return token
+        except requests.RequestException:
+            pass
     with sqlite3.connect(CACHE_DB_PATH) as conn:
         conn.execute(
             "INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)",
@@ -262,28 +271,31 @@ def get_user_by_token(token: str) -> Optional[Tuple[int, str]]:
     if not token:
         return None
     if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
-        response = requests.get(
-            f"{SUPABASE_URL}/rest/v1/sessions",
-            headers=supabase_headers(),
-            params={"token": f"eq.{token}", "select": "user_id"},
-            timeout=5,
-        )
-        response.raise_for_status()
-        data = response.json()
-        if not data:
-            return None
-        user_id = data[0].get("user_id")
-        response = requests.get(
-            f"{SUPABASE_URL}/rest/v1/users",
-            headers=supabase_headers(),
-            params={"id": f"eq.{user_id}", "select": "id,email"},
-            timeout=5,
-        )
-        response.raise_for_status()
-        user = response.json()
-        if not user:
-            return None
-        return user[0].get("id"), user[0].get("email")
+        try:
+            response = requests.get(
+                f"{SUPABASE_URL}/rest/v1/sessions",
+                headers=supabase_headers(),
+                params={"token": f"eq.{token}", "select": "user_id"},
+                timeout=5,
+            )
+            response.raise_for_status()
+            data = response.json()
+            if not data:
+                return None
+            user_id = data[0].get("user_id")
+            response = requests.get(
+                f"{SUPABASE_URL}/rest/v1/users",
+                headers=supabase_headers(),
+                params={"id": f"eq.{user_id}", "select": "id,email"},
+                timeout=5,
+            )
+            response.raise_for_status()
+            user = response.json()
+            if not user:
+                return None
+            return user[0].get("id"), user[0].get("email")
+        except requests.RequestException:
+            pass
     with sqlite3.connect(CACHE_DB_PATH) as conn:
         row = conn.execute(
             """
@@ -314,7 +326,7 @@ def get_cached_reply(message: str) -> Optional[str]:
             if data:
                 return data[0].get("answer")
         except requests.RequestException:
-            return None
+            pass
     try:
         with sqlite3.connect(CACHE_DB_PATH) as conn:
             row = conn.execute(
@@ -547,10 +559,7 @@ def register(req: AuthRequest, request: Request):
     except sqlite3.IntegrityError:
         raise HTTPException(status_code=409, detail="User already exists.")
     except requests.RequestException:
-        raise HTTPException(
-            status_code=500,
-            detail="Signup failed. Check Supabase tables and service role key.",
-        )
+        raise HTTPException(status_code=500, detail="Signup failed. Please try again.")
     if not user_id:
         raise HTTPException(status_code=500, detail="Failed to create user.")
     token = create_session(user_id)
