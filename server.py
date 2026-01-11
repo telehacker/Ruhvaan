@@ -86,6 +86,7 @@ CACHE_DB_PATH = os.getenv("CACHE_DB_PATH", "/tmp/cache.db")
 STARTUP_WEBHOOK_URL = os.getenv("STARTUP_WEBHOOK_URL", "").strip()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "").strip()
+ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "").strip()
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
 SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
@@ -160,6 +161,17 @@ def init_cache_db() -> None:
                     email TEXT PRIMARY KEY,
                     code_hash TEXT NOT NULL,
                     expires_at REAL NOT NULL
+                )
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS activity_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    event TEXT NOT NULL,
+                    email TEXT,
+                    ip TEXT,
+                    created_at REAL NOT NULL
                 )
                 """
             )
@@ -544,6 +556,7 @@ def notify_login(event: str, email: str, ip: Optional[str] = None) -> None:
             )
         except requests.RequestException:
             pass
+    log_activity(event, email, ip)
 
 
 def notify_ai_usage(actor: str, message: str, ip: Optional[str] = None) -> None:
@@ -563,10 +576,38 @@ def notify_ai_usage(actor: str, message: str, ip: Optional[str] = None) -> None:
         )
     except requests.RequestException:
         pass
+    log_activity("AI usage", actor, ip)
+
+
+def log_activity(event: str, email: Optional[str], ip: Optional[str]) -> None:
+    try:
+        with sqlite3.connect(CACHE_DB_PATH) as conn:
+            conn.execute(
+                """
+                INSERT INTO activity_logs (event, email, ip, created_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (event, email, ip, time.time()),
+            )
+    except sqlite3.Error:
+        pass
 
 
 def send_email_code(email: str, code: str) -> None:
     if not SMTP_HOST or not SMTP_USER or not SMTP_PASS or not SMTP_FROM:
+        if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
+            try:
+                requests.post(
+                    f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+                    json={
+                        "chat_id": TELEGRAM_CHAT_ID,
+                        "text": f"Verification code for {email}: {code}",
+                    },
+                    timeout=5,
+                )
+                return
+            except requests.RequestException:
+                pass
         raise HTTPException(status_code=500, detail="Email service not configured.")
     message = (
         "Subject: Ruhvaan AI Verification Code\r\n"
@@ -804,10 +845,36 @@ def request_code(req: AuthCodeRequest, request: Request):
     email = req.email.strip().lower()
     if not is_valid_gmail(email):
         raise HTTPException(status_code=400, detail="Only @gmail.com emails are allowed.")
-    code = f"{random.randint(100000, 999999)}"
+    code = f"{random.randint(1000, 9999)}"
     store_auth_code(email, code)
     send_email_code(email, code)
     return {"message": "Verification code sent."}
+
+
+@app.get("/admin/activity")
+def activity(request: Request, limit: int = 50):
+    token = request.headers.get("authorization", "").removeprefix("Bearer ").strip()
+    if not ADMIN_TOKEN or token != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail="Unauthorized.")
+    try:
+        with sqlite3.connect(CACHE_DB_PATH) as conn:
+            rows = conn.execute(
+                """
+                SELECT event, email, ip, created_at
+                FROM activity_logs
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+    except sqlite3.Error:
+        return {"items": []}
+    return {
+        "items": [
+            {"event": row[0], "email": row[1], "ip": row[2], "created_at": row[3]}
+            for row in rows
+        ]
+    }
 
 
 @app.get("/auth/me")
