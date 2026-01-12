@@ -716,6 +716,12 @@ INDEX_HTML = """<!DOCTYPE html>
         <div class="modal">
             <div class="modal-title">
                 <h3>Plans & Pricing</h3>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span class="coming-soon">Coming Soon</span>
+                    <button class="modal-close" id="closePlansIcon" aria-label="Close plans">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
             </div>
             <div class="plans-grid">
                 <div class="plan-card">
@@ -811,6 +817,7 @@ INDEX_HTML = """<!DOCTYPE html>
         const loginModal = document.getElementById('loginModal');
         const signupModal = document.getElementById('signupModal');
         const plansModal = document.getElementById('plansModal');
+        const closePlansIcon = document.getElementById('closePlansIcon');
         const loginEmail = document.getElementById('loginEmail');
         const loginPassword = document.getElementById('loginPassword');
         const loginBtn = document.getElementById('loginBtn');
@@ -1276,6 +1283,9 @@ INDEX_HTML = """<!DOCTYPE html>
         }
         if (closeSignupIcon) {
             closeSignupIcon.addEventListener('click', hideSignupModal);
+        }
+        if (closePlansIcon) {
+            closePlansIcon.addEventListener('click', hidePlansModal);
         }
         if (openSignup) {
             openSignup.addEventListener('click', () => showSignupModal());
