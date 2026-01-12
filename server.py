@@ -354,6 +354,27 @@ def find_user_by_email(email: str) -> Tuple[Optional[int], Optional[str]]:
     return (row[0], row[1]) if row else (None, None)
 
 
+def update_user_password(email: str, password: str) -> None:
+    password_hash = hash_password(password)
+    if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
+        try:
+            requests.patch(
+                f"{SUPABASE_URL}/rest/v1/users",
+                headers=supabase_headers(),
+                params={"email": f"eq.{email}"},
+                json={"password_hash": password_hash},
+                timeout=5,
+            ).raise_for_status()
+            return
+        except requests.RequestException:
+            pass
+    with sqlite3.connect(CACHE_DB_PATH) as conn:
+        conn.execute(
+            "UPDATE users SET password_hash = ? WHERE email = ?",
+            (password_hash, email),
+        )
+
+
 def create_session(user_id: int) -> str:
     token = secrets.token_hex(24)
     created_at = time.time()
@@ -699,6 +720,12 @@ class AuthRegisterRequest(BaseModel):
     code: str
 
 
+class AuthResetRequest(BaseModel):
+    email: str
+    password: str
+    code: str
+
+
 @app.get("/")
 def root():
     index_path = Path(__file__).resolve().parent / "index.html"
@@ -799,6 +826,11 @@ def chat(req: ChatRequest, request: Request):
 
     # Branding
     reply = reply.replace("Google", "Ruhvaan").replace("Gemini", "Ruhvaan AI")
+    reply_lines = [line.strip() for line in reply.splitlines() if line.strip()]
+    if reply_lines:
+        reply = "\n".join(reply_lines[:4])
+        if len(reply) > 400:
+            reply = reply[:400].rsplit(" ", 1)[0] + "..."
     save_cached_reply(req.message, reply)
     return {"reply": reply}
 
@@ -860,11 +892,17 @@ def register(req: AuthRegisterRequest, request: Request):
         raise HTTPException(status_code=400, detail="Invalid or expired verification code.")
     existing_id, _ = find_user_by_email(email)
     if existing_id:
-        raise HTTPException(status_code=409, detail="User already exists.")
+        raise HTTPException(
+            status_code=409,
+            detail="User already exists. Please login or use Forgot Password.",
+        )
     try:
         user_id, _ = create_user(email, req.password)
     except sqlite3.IntegrityError:
-        raise HTTPException(status_code=409, detail="User already exists.")
+        raise HTTPException(
+            status_code=409,
+            detail="User already exists. Please login or use Forgot Password.",
+        )
     except requests.RequestException:
         raise HTTPException(status_code=500, detail="Signup failed. Please try again.")
     if not user_id:
@@ -905,6 +943,46 @@ def request_code(req: AuthCodeRequest, request: Request):
         if exc.status_code == 500 and str(exc.detail).startswith("Email service not configured"):
             return {"message": str(exc.detail)}
         raise
+
+
+@app.post("/auth/request-reset-code")
+def request_reset_code(req: AuthCodeRequest, request: Request):
+    enforce_rate_limit(request)
+    email = req.email.strip().lower()
+    if not is_valid_gmail(email):
+        raise HTTPException(status_code=400, detail="Only @gmail.com emails are allowed.")
+    user_id, _ = find_user_by_email(email)
+    if not user_id:
+        raise HTTPException(status_code=404, detail="No account found for this email.")
+    code = f"{random.randint(1000, 9999)}"
+    store_auth_code(email, code)
+    try:
+        send_email_code(email, code)
+        return {"message": "Verification code sent."}
+    except HTTPException as exc:
+        if exc.status_code == 500 and str(exc.detail).startswith("Email service not configured"):
+            return {"message": str(exc.detail)}
+        raise
+
+
+@app.post("/auth/reset-password")
+def reset_password(req: AuthResetRequest, request: Request):
+    enforce_rate_limit(request)
+    email = req.email.strip().lower()
+    if not is_valid_gmail(email):
+        raise HTTPException(status_code=400, detail="Only @gmail.com emails are allowed.")
+    if len(req.password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters.")
+    if not req.code:
+        raise HTTPException(status_code=400, detail="Verification code is required.")
+    if not verify_auth_code(email, req.code.strip()):
+        raise HTTPException(status_code=400, detail="Invalid or expired verification code.")
+    user_id, _ = find_user_by_email(email)
+    if not user_id:
+        raise HTTPException(status_code=404, detail="No account found for this email.")
+    update_user_password(email, req.password)
+    notify_login("Password reset", email, get_client_ip(request))
+    return {"message": "Password updated."}
 
 
 @app.get("/admin/activity")

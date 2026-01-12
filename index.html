@@ -421,6 +421,19 @@
         }
         .modal-actions .primary { background: var(--primary); color: #fff; }
         .modal-actions .secondary { background: rgba(255,255,255,0.06); color: #fff; border: 1px solid var(--border); }
+        .modal-link {
+            margin-top: 12px;
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        .modal-link button {
+            background: transparent;
+            border: none;
+            color: var(--primary);
+            cursor: pointer;
+            font-weight: 600;
+        }
         .modal-switch {
             margin-top: 12px;
             text-align: center;
@@ -675,6 +688,9 @@
                 <button class="secondary" id="closeLogin">Cancel</button>
                 <button class="primary" id="loginBtn">Login</button>
             </div>
+            <div class="modal-link">
+                <button id="openForgot">Forgot password?</button>
+            </div>
             <p id="loginError" style="color:#f87171; margin-top:10px; display:none;"></p>
             <div class="modal-switch">
                 New here? <button id="openSignup">Create an account</button>
@@ -710,6 +726,34 @@
             <div class="modal-switch">
                 Already have an account? <button id="openLogin">Login</button>
             </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="forgotModal">
+        <div class="modal">
+            <div class="modal-title">
+                <h3>Reset Password</h3>
+                <button class="modal-close" id="closeForgotIcon" aria-label="Close reset">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <p>Use OTP to reset your password.</p>
+            <input type="email" id="forgotEmail" placeholder="Email (@gmail.com)" />
+            <div class="password-field">
+                <input type="password" id="forgotPassword" placeholder="New password" />
+                <button class="password-toggle" id="toggleForgotPassword" type="button">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </div>
+            <input type="text" id="forgotCode" placeholder="4-digit verification code" />
+            <div class="modal-actions">
+                <button class="secondary" id="closeForgot">Cancel</button>
+                <button class="primary" id="forgotSendCodeBtn">Send Code</button>
+            </div>
+            <div class="modal-actions">
+                <button class="secondary" id="forgotResetBtn">Update Password</button>
+            </div>
+            <p id="forgotError" style="color:#f87171; margin-top:10px; display:none;"></p>
         </div>
     </div>
 
@@ -818,24 +862,35 @@
         const loginModal = document.getElementById('loginModal');
         const signupModal = document.getElementById('signupModal');
         const plansModal = document.getElementById('plansModal');
+        const forgotModal = document.getElementById('forgotModal');
         const closePlansIcon = document.getElementById('closePlansIcon');
         const loginEmail = document.getElementById('loginEmail');
         const loginPassword = document.getElementById('loginPassword');
         const loginBtn = document.getElementById('loginBtn');
         const sendCodeBtn = document.getElementById('sendCodeBtn');
         const signupBtn = document.getElementById('signupBtn');
+        const forgotSendCodeBtn = document.getElementById('forgotSendCodeBtn');
+        const forgotResetBtn = document.getElementById('forgotResetBtn');
         const closeLogin = document.getElementById('closeLogin');
+        const closeForgot = document.getElementById('closeForgot');
+        const closeForgotIcon = document.getElementById('closeForgotIcon');
         const loginError = document.getElementById('loginError');
         const togglePassword = document.getElementById('togglePassword');
         const signupEmail = document.getElementById('signupEmail');
         const signupPassword = document.getElementById('signupPassword');
         const signupCode = document.getElementById('signupCode');
         const toggleSignupPassword = document.getElementById('toggleSignupPassword');
+        const forgotEmail = document.getElementById('forgotEmail');
+        const forgotPassword = document.getElementById('forgotPassword');
+        const forgotCode = document.getElementById('forgotCode');
+        const toggleForgotPassword = document.getElementById('toggleForgotPassword');
         const closeSignup = document.getElementById('closeSignup');
         const closeSignupIcon = document.getElementById('closeSignupIcon');
         const signupError = document.getElementById('signupError');
+        const forgotError = document.getElementById('forgotError');
         const openSignup = document.getElementById('openSignup');
         const openLogin = document.getElementById('openLogin');
+        const openForgot = document.getElementById('openForgot');
 
         // State
         let isGenerating = false;
@@ -1120,6 +1175,7 @@
             }
             loginModal.classList.add('active');
             signupModal.classList.remove('active');
+            forgotModal.classList.remove('active');
         }
 
         function hideLoginModal() {
@@ -1136,11 +1192,53 @@
             }
             signupModal.classList.add('active');
             loginModal.classList.remove('active');
+            forgotModal.classList.remove('active');
         }
 
         function hideSignupModal() {
             signupModal.classList.remove('active');
             signupError.style.display = 'none';
+        }
+
+        function showForgotModal(message) {
+            if (message) {
+                forgotError.style.display = 'block';
+                forgotError.textContent = message;
+            } else {
+                forgotError.style.display = 'none';
+            }
+            forgotModal.classList.add('active');
+            signupModal.classList.remove('active');
+            loginModal.classList.remove('active');
+        }
+
+        function hideForgotModal() {
+            forgotModal.classList.remove('active');
+            forgotError.style.display = 'none';
+        }
+
+        function startOtpTimer(button) {
+            if (!button) return;
+            if (button.dataset.timerId) {
+                clearInterval(Number(button.dataset.timerId));
+            }
+            const defaultLabel = button.dataset.defaultLabel || button.textContent.trim();
+            button.dataset.defaultLabel = defaultLabel;
+            let remaining = 30;
+            button.disabled = true;
+            button.textContent = `Resend in ${remaining}s`;
+            const timerId = setInterval(() => {
+                remaining -= 1;
+                if (remaining <= 0) {
+                    clearInterval(timerId);
+                    button.disabled = false;
+                    button.textContent = 'Resend OTP';
+                    button.dataset.timerId = '';
+                } else {
+                    button.textContent = `Resend in ${remaining}s`;
+                }
+            }, 1000);
+            button.dataset.timerId = String(timerId);
         }
 
         function showPlansModal() {
@@ -1279,11 +1377,17 @@
         if (closeLogin) {
             closeLogin.addEventListener('click', hideLoginModal);
         }
+        if (closeForgot) {
+            closeForgot.addEventListener('click', hideForgotModal);
+        }
         if (closeSignup) {
             closeSignup.addEventListener('click', hideSignupModal);
         }
         if (closeSignupIcon) {
             closeSignupIcon.addEventListener('click', hideSignupModal);
+        }
+        if (closeForgotIcon) {
+            closeForgotIcon.addEventListener('click', hideForgotModal);
         }
         if (closePlansIcon) {
             closePlansIcon.addEventListener('click', hidePlansModal);
@@ -1293,6 +1397,9 @@
         }
         if (openLogin) {
             openLogin.addEventListener('click', () => showLoginModal());
+        }
+        if (openForgot) {
+            openForgot.addEventListener('click', () => showForgotModal());
         }
 
         if (loginBtn) {
@@ -1338,8 +1445,8 @@
                     }
                     const data = await response.json();
                     setAuth(data.token, data.email);
-                    hideLoginModal();
-                    showTinyToast("Your account was created successfully. Enjoy this AI!");
+                    hideSignupModal();
+                    showTinyToast("Account created.");
                 } catch (error) {
                     showSignupModal(error.message || "Signup failed. Try a different email.");
                 }
@@ -1368,7 +1475,9 @@
                         const errorData = await response.json().catch(() => ({}));
                         throw new Error(errorData.detail || 'Failed to send code');
                     }
-                    showTinyToast("Verification code sent to your email.");
+                    const data = await response.json();
+                    showTinyToast(data.message || "Verification code sent.");
+                    startOtpTimer(sendCodeBtn);
                 } catch (error) {
                     showSignupModal(error.message || "Failed to send code.");
                 }
@@ -1382,6 +1491,62 @@
                 toggleSignupPassword.innerHTML = isHidden
                     ? '<i class="fas fa-eye-slash"></i>'
                     : '<i class="fas fa-eye"></i>';
+            });
+        }
+
+        if (toggleForgotPassword) {
+            toggleForgotPassword.addEventListener('click', () => {
+                const isHidden = forgotPassword.type === 'password';
+                forgotPassword.type = isHidden ? 'text' : 'password';
+                toggleForgotPassword.innerHTML = isHidden
+                    ? '<i class="fas fa-eye-slash"></i>'
+                    : '<i class="fas fa-eye"></i>';
+            });
+        }
+
+        if (forgotSendCodeBtn) {
+            forgotSendCodeBtn.addEventListener('click', async () => {
+                try {
+                    const response = await fetch(`${API_URL}/auth/request-reset-code`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: forgotEmail.value.trim() })
+                    });
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.detail || 'Failed to send code');
+                    }
+                    const data = await response.json();
+                    showTinyToast(data.message || "Verification code sent.");
+                    startOtpTimer(forgotSendCodeBtn);
+                } catch (error) {
+                    showForgotModal(error.message || "Failed to send code.");
+                }
+            });
+        }
+
+        if (forgotResetBtn) {
+            forgotResetBtn.addEventListener('click', async () => {
+                try {
+                    const response = await fetch(`${API_URL}/auth/reset-password`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email: forgotEmail.value.trim(),
+                            password: forgotPassword.value,
+                            code: forgotCode.value.trim()
+                        })
+                    });
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.detail || 'Password reset failed');
+                    }
+                    const data = await response.json();
+                    hideForgotModal();
+                    showTinyToast(data.message || "Password updated.");
+                } catch (error) {
+                    showForgotModal(error.message || "Password reset failed.");
+                }
             });
         }
 
