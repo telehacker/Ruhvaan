@@ -208,6 +208,93 @@
             100% { transform: scale(1); opacity: 1; }
         }
 
+        .user-menu {
+            position: relative;
+        }
+        .user-menu-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+        .user-menu-btn img {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .user-menu-dropdown {
+            position: absolute;
+            right: 0;
+            top: 46px;
+            min-width: 220px;
+            background: #121218;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            display: none;
+            flex-direction: column;
+            z-index: 90;
+            padding: 8px;
+        }
+        .user-menu-dropdown.active { display: flex; }
+        .user-menu-item {
+            padding: 10px 12px;
+            border-radius: 10px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .user-menu-item:hover { background: rgba(255,255,255,0.05); }
+        .user-menu-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 6px 0;
+        }
+        .profile-avatar {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(255,255,255,0.2);
+            margin: 0 auto 12px;
+            display: block;
+        }
+        .profile-upload {
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        .profile-upload label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--primary);
+        }
+        .profile-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .profile-actions button {
+            flex: 1;
+            border-radius: 10px;
+            padding: 10px 12px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
         .tg-card {
             margin-top: 20px; padding: 16px; 
             background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
@@ -633,6 +720,31 @@
                 <div class="status-badge">
                     <span class="status-dot"></span> ONLINE
                 </div>
+                <div class="user-menu">
+                    <button class="user-menu-btn" id="userMenuBtn" type="button">
+                        <img id="userMenuAvatar" src="https://i.imgur.com/8Km9tLL.png" alt="Profile" />
+                        <span>Profile</span>
+                        <i class="fas fa-chevron-down" style="font-size:12px;"></i>
+                    </button>
+                    <div class="user-menu-dropdown" id="userMenuDropdown">
+                        <div class="user-menu-item" id="menuUpgrade">
+                            <i class="fas fa-arrow-up-right-dots"></i> Upgrade plan
+                        </div>
+                        <div class="user-menu-item" id="menuPersonalize">
+                            <i class="fas fa-sliders"></i> Personalization
+                        </div>
+                        <div class="user-menu-item" id="menuSettings">
+                            <i class="fas fa-gear"></i> Settings
+                        </div>
+                        <div class="user-menu-divider"></div>
+                        <div class="user-menu-item" id="menuHelp">
+                            <i class="fas fa-circle-question"></i> Help
+                        </div>
+                        <div class="user-menu-item" id="menuLogout">
+                            <i class="fas fa-right-from-bracket"></i> Log out
+                        </div>
+                    </div>
+                </div>
                 <div class="auth-pill" id="authPill">
                     <i class="fas fa-user"></i>
                     <span id="authPillText">Guest</span>
@@ -757,6 +869,33 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="profileModal">
+        <div class="modal">
+            <div class="modal-title">
+                <h3>Profile</h3>
+                <button class="modal-close" id="closeProfileIcon" aria-label="Close profile">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <img id="profileAvatar" class="profile-avatar" src="https://i.imgur.com/8Km9tLL.png" alt="Profile avatar" />
+            <div class="profile-upload">
+                <label>
+                    <i class="fas fa-camera"></i> Change DP
+                    <input type="file" id="profileAvatarInput" accept="image/*" style="display:none" />
+                </label>
+            </div>
+            <input type="text" id="profileName" placeholder="Full name" />
+            <input type="text" id="profilePhone" placeholder="Phone number" />
+            <input type="text" id="profileClass" placeholder="Class / Year" />
+            <input type="text" id="profileTarget" placeholder="Target exam" />
+            <input type="text" id="profileCity" placeholder="City" />
+            <div class="profile-actions">
+                <button class="secondary" id="profileSaveBtn">Save</button>
+                <button class="primary" id="profileResetBtn">Reset Password</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="plansModal">
         <div class="modal">
             <div class="modal-title">
@@ -863,7 +1002,9 @@
         const signupModal = document.getElementById('signupModal');
         const plansModal = document.getElementById('plansModal');
         const forgotModal = document.getElementById('forgotModal');
+        const profileModal = document.getElementById('profileModal');
         const closePlansIcon = document.getElementById('closePlansIcon');
+        const closeProfileIcon = document.getElementById('closeProfileIcon');
         const loginEmail = document.getElementById('loginEmail');
         const loginPassword = document.getElementById('loginPassword');
         const loginBtn = document.getElementById('loginBtn');
@@ -884,6 +1025,15 @@
         const forgotPassword = document.getElementById('forgotPassword');
         const forgotCode = document.getElementById('forgotCode');
         const toggleForgotPassword = document.getElementById('toggleForgotPassword');
+        const profileName = document.getElementById('profileName');
+        const profilePhone = document.getElementById('profilePhone');
+        const profileClass = document.getElementById('profileClass');
+        const profileTarget = document.getElementById('profileTarget');
+        const profileCity = document.getElementById('profileCity');
+        const profileAvatar = document.getElementById('profileAvatar');
+        const profileAvatarInput = document.getElementById('profileAvatarInput');
+        const profileSaveBtn = document.getElementById('profileSaveBtn');
+        const profileResetBtn = document.getElementById('profileResetBtn');
         const closeSignup = document.getElementById('closeSignup');
         const closeSignupIcon = document.getElementById('closeSignupIcon');
         const signupError = document.getElementById('signupError');
@@ -891,6 +1041,14 @@
         const openSignup = document.getElementById('openSignup');
         const openLogin = document.getElementById('openLogin');
         const openForgot = document.getElementById('openForgot');
+        const userMenuBtn = document.getElementById('userMenuBtn');
+        const userMenuAvatar = document.getElementById('userMenuAvatar');
+        const userMenuDropdown = document.getElementById('userMenuDropdown');
+        const menuUpgrade = document.getElementById('menuUpgrade');
+        const menuPersonalize = document.getElementById('menuPersonalize');
+        const menuSettings = document.getElementById('menuSettings');
+        const menuHelp = document.getElementById('menuHelp');
+        const menuLogout = document.getElementById('menuLogout');
 
         // State
         let isGenerating = false;
@@ -900,6 +1058,7 @@
         window.onload = () => {
             loadHistory();
             refreshAuthUI();
+            loadProfile();
         };
 
         // --- CORE FUNCTIONS ---
@@ -1176,6 +1335,7 @@
             loginModal.classList.add('active');
             signupModal.classList.remove('active');
             forgotModal.classList.remove('active');
+            profileModal.classList.remove('active');
         }
 
         function hideLoginModal() {
@@ -1193,6 +1353,7 @@
             signupModal.classList.add('active');
             loginModal.classList.remove('active');
             forgotModal.classList.remove('active');
+            profileModal.classList.remove('active');
         }
 
         function hideSignupModal() {
@@ -1215,6 +1376,35 @@
         function hideForgotModal() {
             forgotModal.classList.remove('active');
             forgotError.style.display = 'none';
+        }
+
+        function showProfileModal() {
+            loadProfile();
+            profileModal.classList.add('active');
+        }
+
+        function hideProfileModal() {
+            profileModal.classList.remove('active');
+        }
+
+        function loadProfile() {
+            profileName.value = localStorage.getItem('ruhvaan_profile_name') || '';
+            profilePhone.value = localStorage.getItem('ruhvaan_profile_phone') || '';
+            profileClass.value = localStorage.getItem('ruhvaan_profile_class') || '';
+            profileTarget.value = localStorage.getItem('ruhvaan_profile_target') || '';
+            profileCity.value = localStorage.getItem('ruhvaan_profile_city') || '';
+            const avatar = localStorage.getItem('ruhvaan_profile_avatar') || 'https://i.imgur.com/8Km9tLL.png';
+            profileAvatar.src = avatar;
+            userMenuAvatar.src = avatar;
+        }
+
+        function saveProfile() {
+            localStorage.setItem('ruhvaan_profile_name', profileName.value.trim());
+            localStorage.setItem('ruhvaan_profile_phone', profilePhone.value.trim());
+            localStorage.setItem('ruhvaan_profile_class', profileClass.value.trim());
+            localStorage.setItem('ruhvaan_profile_target', profileTarget.value.trim());
+            localStorage.setItem('ruhvaan_profile_city', profileCity.value.trim());
+            showTinyToast("Profile saved.");
         }
 
         function startOtpTimer(button) {
@@ -1389,6 +1579,9 @@
         if (closeForgotIcon) {
             closeForgotIcon.addEventListener('click', hideForgotModal);
         }
+        if (closeProfileIcon) {
+            closeProfileIcon.addEventListener('click', hideProfileModal);
+        }
         if (closePlansIcon) {
             closePlansIcon.addEventListener('click', hidePlansModal);
         }
@@ -1400,6 +1593,76 @@
         }
         if (openForgot) {
             openForgot.addEventListener('click', () => showForgotModal());
+        }
+        if (profileSaveBtn) {
+            profileSaveBtn.addEventListener('click', () => {
+                saveProfile();
+                hideProfileModal();
+            });
+        }
+        if (profileResetBtn) {
+            profileResetBtn.addEventListener('click', () => {
+                hideProfileModal();
+                showForgotModal();
+            });
+        }
+        if (profileAvatarInput) {
+            profileAvatarInput.addEventListener('change', () => {
+                const file = profileAvatarInput.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const dataUrl = String(reader.result || '');
+                    if (dataUrl) {
+                        localStorage.setItem('ruhvaan_profile_avatar', dataUrl);
+                        profileAvatar.src = dataUrl;
+                        userMenuAvatar.src = dataUrl;
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+        if (userMenuBtn && userMenuDropdown) {
+            userMenuBtn.addEventListener('click', (event) => {
+                event.stopPropagation();
+                userMenuDropdown.classList.toggle('active');
+            });
+        }
+        document.addEventListener('click', () => {
+            if (userMenuDropdown) {
+                userMenuDropdown.classList.remove('active');
+            }
+        });
+        if (menuUpgrade) {
+            menuUpgrade.addEventListener('click', () => {
+                userMenuDropdown.classList.remove('active');
+                showPlansModal();
+            });
+        }
+        if (menuPersonalize) {
+            menuPersonalize.addEventListener('click', () => {
+                userMenuDropdown.classList.remove('active');
+                showProfileModal();
+            });
+        }
+        if (menuSettings) {
+            menuSettings.addEventListener('click', () => {
+                userMenuDropdown.classList.remove('active');
+                showProfileModal();
+            });
+        }
+        if (menuHelp) {
+            menuHelp.addEventListener('click', () => {
+                userMenuDropdown.classList.remove('active');
+                window.open('https://t.me/Ruhvaan', '_blank');
+            });
+        }
+        if (menuLogout) {
+            menuLogout.addEventListener('click', () => {
+                userMenuDropdown.classList.remove('active');
+                clearAuth();
+                showTinyToast('Logged out');
+            });
         }
 
         if (loginBtn) {
