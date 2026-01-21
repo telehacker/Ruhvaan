@@ -1109,6 +1109,42 @@ INDEX_HTML = """<!DOCTYPE html>
         </div>
     </div>
 
+    <div class="modal-overlay" id="issuesModal">
+        <div class="modal">
+            <div class="modal-title">
+                <h3>Open Issues</h3>
+                <button class="modal-close" id="closeIssuesIcon" aria-label="Close issues">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <p style="color:var(--text-muted); margin-bottom:12px;">Tracking 9 active issues to prioritize the next upgrades.</p>
+            <div class="feature-stack">
+                <div class="feature-group">
+                    <h4>Enhancements</h4>
+                    <ul class="feature-list">
+                        <li>Feature parity: analyze & match features from leading AIs (Gemini, Perplexity, etc.).</li>
+                        <li>Make UI fully mobile responsive and support user themes.</li>
+                        <li>Add voice input, voice messages & image generation (AI).</li>
+                        <li>Branding/creator answer configurable (remove "Vivek", allow custom).</li>
+                        <li>Integrate payment gateway (Stripe/Razorpay) for feature unlock.</li>
+                        <li>Implement proper pricing configuration and display.</li>
+                    </ul>
+                </div>
+                <div class="feature-group">
+                    <h4>Fixes</h4>
+                    <ul class="feature-list">
+                        <li>Data not saving reliably: fix localStorage and sync robustness.</li>
+                        <li>Improve auth "Guest" label & login/logout UX.</li>
+                        <li>Fix: strange "q1" prefix appears in message replies.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="secondary" onclick="hideIssuesModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="plansModal">
         <div class="modal">
             <div class="modal-title">
