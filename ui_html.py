@@ -191,6 +191,16 @@ INDEX_HTML = """<!DOCTYPE html>
             border: 1px solid rgba(255, 255, 255, 0.12);
             color: var(--text-muted);
         }
+        .menu-count {
+            margin-left: auto;
+            padding: 3px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 999px;
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.35);
+            color: var(--primary);
+        }
 
         /* temporary animated indicator inside menu item */
         .menu-item .module-anim {
@@ -693,6 +703,10 @@ INDEX_HTML = """<!DOCTYPE html>
             <div class="menu-item" onclick="showPlansModal()">
                 <i class="fas fa-tags"></i> Plans & Pricing
             </div>
+            <div class="menu-item" onclick="showIssuesModal()">
+                <i class="fas fa-triangle-exclamation"></i> Issues
+                <span class="menu-count">9</span>
+            </div>
             <div class="menu-item" onclick="clearStorage()">
                 <i class="fas fa-trash"></i> Clear Memory
             </div>
@@ -895,6 +909,42 @@ INDEX_HTML = """<!DOCTYPE html>
         </div>
     </div>
 
+    <div class="modal-overlay" id="issuesModal">
+        <div class="modal">
+            <div class="modal-title">
+                <h3>Open Issues</h3>
+                <button class="modal-close" id="closeIssuesIcon" aria-label="Close issues">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <p style="color:var(--text-muted); margin-bottom:12px;">Tracking 9 active issues to prioritize the next upgrades.</p>
+            <div class="feature-stack">
+                <div class="feature-group">
+                    <h4>Enhancements</h4>
+                    <ul class="feature-list">
+                        <li>Feature parity: analyze & match features from leading AIs (Gemini, Perplexity, etc.).</li>
+                        <li>Make UI fully mobile responsive and support user themes.</li>
+                        <li>Add voice input, voice messages & image generation (AI).</li>
+                        <li>Branding/creator answer configurable (remove "Vivek", allow custom).</li>
+                        <li>Integrate payment gateway (Stripe/Razorpay) for feature unlock.</li>
+                        <li>Implement proper pricing configuration and display.</li>
+                    </ul>
+                </div>
+                <div class="feature-group">
+                    <h4>Fixes</h4>
+                    <ul class="feature-list">
+                        <li>Data not saving reliably: fix localStorage and sync robustness.</li>
+                        <li>Improve auth "Guest" label & login/logout UX.</li>
+                        <li>Fix: strange "q1" prefix appears in message replies.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="secondary" onclick="hideIssuesModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="plansModal">
         <div class="modal">
             <div class="modal-title">
@@ -999,10 +1049,12 @@ INDEX_HTML = """<!DOCTYPE html>
         const authPillText = document.getElementById('authPillText');
         const loginModal = document.getElementById('loginModal');
         const signupModal = document.getElementById('signupModal');
+        const issuesModal = document.getElementById('issuesModal');
         const plansModal = document.getElementById('plansModal');
         const forgotModal = document.getElementById('forgotModal');
         const profileModal = document.getElementById('profileModal');
         const closePlansIcon = document.getElementById('closePlansIcon');
+        const closeIssuesIcon = document.getElementById('closeIssuesIcon');
         const closeProfileIcon = document.getElementById('closeProfileIcon');
         const loginEmail = document.getElementById('loginEmail');
         const loginPassword = document.getElementById('loginPassword');
@@ -1438,6 +1490,14 @@ INDEX_HTML = """<!DOCTYPE html>
             plansModal.classList.remove('active');
         }
 
+        function showIssuesModal() {
+            issuesModal.classList.add('active');
+        }
+
+        function hideIssuesModal() {
+            issuesModal.classList.remove('active');
+        }
+
         // --- NEW: Non-blocking module animation (replaces alert popups) ---
         function triggerModuleAnim(el, moduleName) {
             // create small animated dot inside the menu item to show feedback
@@ -1583,6 +1643,9 @@ INDEX_HTML = """<!DOCTYPE html>
         }
         if (closePlansIcon) {
             closePlansIcon.addEventListener('click', hidePlansModal);
+        }
+        if (closeIssuesIcon) {
+            closeIssuesIcon.addEventListener('click', hideIssuesModal);
         }
         if (openSignup) {
             openSignup.addEventListener('click', () => showSignupModal());
