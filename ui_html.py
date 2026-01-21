@@ -52,12 +52,25 @@ INDEX_HTML = """<!DOCTYPE html>
             overflow: hidden;
             font-size: 16px;
         }
+        body.theme-light {
+            --bg-deep: #f4f5f7;
+            --bg-panel: #ffffff;
+            --bg-chat: #f7f8fb;
+            --primary: #2563eb;
+            --primary-dim: rgba(37, 99, 235, 0.12);
+            --primary-glow: rgba(37, 99, 235, 0.35);
+            --accent: #7c3aed;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --border: rgba(15, 23, 42, 0.12);
+            --success: #16a34a;
+        }
 
         .app-shell {
             width: min(1400px, 100%);
             height: calc(100vh - 48px);
             display: flex;
-            background: rgba(2, 2, 8, 0.88);
+            background: var(--bg-panel);
             border: 1px solid rgba(255, 255, 255, 0.12);
             border-radius: 20px;
             box-shadow: 0 30px 60px rgba(0, 0, 0, 0.55);
@@ -190,6 +203,52 @@ INDEX_HTML = """<!DOCTYPE html>
             background: rgba(255, 255, 255, 0.06);
             border: 1px solid rgba(255, 255, 255, 0.12);
             color: var(--text-muted);
+        }
+        .menu-count {
+            margin-left: auto;
+            padding: 3px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 999px;
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.35);
+            color: var(--primary);
+        }
+        .menu-toggle {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        .menu-toggle input {
+            appearance: none;
+            width: 38px;
+            height: 22px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid var(--border);
+            position: relative;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .menu-toggle input::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #fff;
+            transition: 0.2s;
+        }
+        .menu-toggle input:checked {
+            background: var(--primary);
+        }
+        .menu-toggle input:checked::after {
+            transform: translateX(16px);
         }
 
         /* temporary animated indicator inside menu item */
@@ -400,7 +459,7 @@ INDEX_HTML = """<!DOCTYPE html>
         
         .input-wrapper {
             width: 100%; max-width: 900px;
-            background: rgba(20,20,25,0.9); border: 1px solid var(--border);
+            background: var(--bg-chat); border: 1px solid var(--border);
             border-radius: 16px; padding: 10px;
             display: flex; align-items: flex-end; gap: 12px;
             box-shadow: var(--shadow-lg); transition: 0.3s;
@@ -410,23 +469,41 @@ INDEX_HTML = """<!DOCTYPE html>
             width: 44px; height: 44px; border-radius: 12px;
             border: 1px solid var(--border);
             background: rgba(255,255,255,0.04);
-            color: #fff; cursor: pointer;
+            color: var(--text-main); cursor: pointer;
             display: flex; align-items: center; justify-content: center;
             transition: 0.2s;
         }
         .upload-btn:hover { border-color: var(--primary); color: var(--primary); }
         .upload-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .voice-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.04);
+            color: var(--text-main);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+        .voice-btn.active {
+            border-color: rgba(59,130,246,0.6);
+            color: var(--primary);
+            box-shadow: 0 0 12px rgba(59,130,246,0.3);
+        }
         .input-wrapper:focus-within {
             border-color: var(--primary);
             box-shadow: 0 0 30px rgba(59, 130, 246, 0.15);
         }
 
         textarea {
-            flex: 1; background: transparent; border: none; color: #fff;
+            flex: 1; background: transparent; border: none; color: var(--text-main);
             font-size: 16px; padding: 12px; resize: none;
             max-height: 200px; height: 50px; font-family: var(--font-main);
         }
-        textarea::placeholder { color: #555; }
+        textarea::placeholder { color: var(--text-muted); }
 
         .send-btn {
             width: 50px; height: 50px; border-radius: 12px;
@@ -508,6 +585,51 @@ INDEX_HTML = """<!DOCTYPE html>
         }
         .modal-actions .primary { background: var(--primary); color: #fff; }
         .modal-actions .secondary { background: rgba(255,255,255,0.06); color: #fff; border: 1px solid var(--border); }
+        .plan-card button {
+            margin-top: 14px;
+            width: 100%;
+            border: none;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.06);
+            color: #fff;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+        .plan-card button:hover {
+            border-color: rgba(59, 130, 246, 0.5);
+            color: var(--primary);
+        }
+        .payment-note {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+        .payment-actions {
+            display: grid;
+            gap: 10px;
+            margin-top: 16px;
+        }
+        .payment-actions button {
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.05);
+            color: var(--text-main);
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .payment-actions button.primary {
+            background: var(--primary);
+            color: #fff;
+            border-color: transparent;
+        }
+        .payment-actions button[disabled] {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
         .modal-link {
             margin-top: 12px;
             text-align: center;
@@ -633,13 +755,14 @@ INDEX_HTML = """<!DOCTYPE html>
         /* Mobile Responsive */
         @media (max-width: 850px) {
             body { padding: 0; }
-            .app-shell { width: 100%; height: 100vh; border-radius: 0; }
-            .sidebar { position: absolute; height: 100%; transform: translateX(-100%); }
+            .app-shell { width: 100%; height: 100vh; border-radius: 0; border: none; }
+            .sidebar { position: fixed; height: 100%; transform: translateX(-100%); }
             .sidebar.active { transform: translateX(0); }
             :root { --chat-padding-inline: 5%; }
             .chat-container { padding: 20px var(--chat-padding-inline); }
             .input-section { padding: 20px 10px; }
             .header { padding: 0 20px; }
+            .header-title { font-size: 16px; }
             .mobile-menu-btn { display: block !important; }
             .mascot { left: calc(var(--chat-padding-inline) + 4px); bottom: 110px; } /* avoid input area on small screens */
             .mobile-back-btn { display: flex; }
@@ -682,9 +805,9 @@ INDEX_HTML = """<!DOCTYPE html>
             <div class="menu-item active">
                 <i class="fas fa-comment-alt"></i> Chat Interface
             </div>
-            <div class="menu-item" onclick="triggerModuleAnim(this, 'Generate Images')">
+            <div class="menu-item" onclick="showImageModal()">
                 <i class="fas fa-image"></i> Generate Images
-                <span class="coming-soon">Coming Soon</span>
+                <span class="coming-soon">Beta</span>
             </div>
             <div class="menu-item" onclick="triggerModuleAnim(this, 'Voice Mode')">
                 <i class="fas fa-microphone"></i> Voice Mode
@@ -692,6 +815,17 @@ INDEX_HTML = """<!DOCTYPE html>
             </div>
             <div class="menu-item" onclick="showPlansModal()">
                 <i class="fas fa-tags"></i> Plans & Pricing
+            </div>
+            <div class="menu-item" onclick="showIssuesModal()">
+                <i class="fas fa-triangle-exclamation"></i> Issues
+                <span class="menu-count">9</span>
+            </div>
+            <div class="menu-item">
+                <i class="fas fa-palette"></i> Theme
+                <span class="menu-toggle">
+                    <span>Light</span>
+                    <input type="checkbox" id="themeToggle" aria-label="Toggle light theme" />
+                </span>
             </div>
             <div class="menu-item" onclick="clearStorage()">
                 <i class="fas fa-trash"></i> Clear Memory
@@ -765,6 +899,9 @@ INDEX_HTML = """<!DOCTYPE html>
 
         <div class="input-section">
             <div class="input-wrapper">
+                <button id="voiceBtn" class="voice-btn" title="Voice Input">
+                    <i class="fas fa-microphone"></i>
+                </button>
                 <button id="pdfBtn" class="upload-btn" title="Upload PDF (Coming Soon)">
                     <i class="fas fa-file-pdf"></i>
                 </button>
@@ -892,6 +1029,83 @@ INDEX_HTML = """<!DOCTYPE html>
                 <button class="secondary" id="profileSaveBtn">Save</button>
                 <button class="primary" id="profileResetBtn">Reset Password</button>
             </div>
+            <div style="margin-top:16px;">
+                <h4 style="margin-bottom:6px;">Registered Users (local)</h4>
+                <div id="registeredUsersList" style="font-size:13px; color:var(--text-muted);"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="issuesModal">
+        <div class="modal">
+            <div class="modal-title">
+                <h3>Open Issues</h3>
+                <button class="modal-close" id="closeIssuesIcon" aria-label="Close issues">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <p style="color:var(--text-muted); margin-bottom:12px;">Tracking 9 active issues to prioritize the next upgrades.</p>
+            <div class="feature-stack">
+                <div class="feature-group">
+                    <h4>Enhancements</h4>
+                    <ul class="feature-list">
+                        <li>Feature parity: analyze & match features from leading AIs (Gemini, Perplexity, etc.).</li>
+                        <li>Make UI fully mobile responsive and support user themes.</li>
+                        <li>Add voice input, voice messages & image generation (AI).</li>
+                        <li>Branding/creator answer configurable (use Ruhvaan by default, allow custom).</li>
+                        <li>Integrate payment gateway (Stripe/Razorpay) for feature unlock.</li>
+                        <li>Implement proper pricing configuration and display.</li>
+                    </ul>
+                </div>
+                <div class="feature-group">
+                    <h4>Fixes</h4>
+                    <ul class="feature-list">
+                        <li>Data not saving reliably: fix localStorage and sync robustness.</li>
+                        <li>Improve auth "Guest" label & login/logout UX.</li>
+                        <li>Fix: strange "q1" prefix appears in message replies.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="secondary" onclick="hideIssuesModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="imageModal">
+        <div class="modal">
+            <div class="modal-title">
+                <h3>Generate Image</h3>
+                <button class="modal-close" id="closeImageIcon" aria-label="Close image generator">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <p>Describe the image you want. We'll create a preview as soon as image generation is enabled.</p>
+            <input type="text" id="imagePrompt" placeholder="e.g. Futuristic city at sunset" />
+            <div class="modal-actions">
+                <button class="secondary" onclick="hideImageModal()">Cancel</button>
+                <button class="primary" id="imageGenerateBtn">Generate</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="paymentModal">
+        <div class="modal">
+            <div class="modal-title">
+                <h3>Unlock Premium</h3>
+                <button class="modal-close" id="closePaymentIcon" aria-label="Close payment">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <p id="paymentPlanInfo">Plan selected.</p>
+            <div class="payment-actions">
+                <button class="primary" id="payRazorpayBtn" disabled>Pay with Razorpay (Coming Soon)</button>
+                <button id="payStripeBtn" disabled>Pay with Stripe (Coming Soon)</button>
+            </div>
+            <div class="payment-note">Payment gateway integration will activate once backend billing is live.</div>
+            <div class="modal-actions">
+                <button class="secondary" onclick="hidePaymentModal()">Close</button>
+            </div>
         </div>
     </div>
 
@@ -910,27 +1124,32 @@ INDEX_HTML = """<!DOCTYPE html>
                 <div class="plan-card">
                     <h4>Minor</h4>
                     <div class="plan-price">₹0</div>
-                    <div class="plan-benefits">Basic chat, 3 guest questions, community support.</div>
+                    <div class="plan-benefits">Starter chat, 3 guest questions/day, community support.</div>
+                    <button class="plan-select" data-plan="Minor" data-price="₹0">Current Plan</button>
                 </div>
                 <div class="plan-card">
                     <h4>Major</h4>
                     <div class="plan-price">₹199/mo</div>
-                    <div class="plan-benefits">Unlimited chat, PDF Q&A, faster responses.</div>
+                    <div class="plan-benefits">Unlimited chat, PDF Q&A, priority responses.</div>
+                    <button class="plan-select" data-plan="Major" data-price="₹199/mo">Choose Major</button>
                 </div>
                 <div class="plan-card">
                     <h4>Pro</h4>
                     <div class="plan-price">₹499/mo</div>
-                    <div class="plan-benefits">Priority queue, advanced reasoning, analytics.</div>
+                    <div class="plan-benefits">Advanced reasoning, analytics, faster model access.</div>
+                    <button class="plan-select" data-plan="Pro" data-price="₹499/mo">Choose Pro</button>
                 </div>
                 <div class="plan-card">
                     <h4>Plus</h4>
                     <div class="plan-price">₹799/mo</div>
                     <div class="plan-benefits">Team sharing, extended memory, premium models.</div>
+                    <button class="plan-select" data-plan="Plus" data-price="₹799/mo">Choose Plus</button>
                 </div>
                 <div class="plan-card">
                     <h4>Advance</h4>
                     <div class="plan-price">₹1299/mo</div>
                     <div class="plan-benefits">Dedicated support, custom tools, SLA access.</div>
+                    <button class="plan-select" data-plan="Advance" data-price="₹1299/mo">Choose Advance</button>
                 </div>
             </div>
             <div class="feature-stack">
@@ -997,12 +1216,20 @@ INDEX_HTML = """<!DOCTYPE html>
         const pdfInput = document.getElementById('pdfInput');
         const authPill = document.getElementById('authPill');
         const authPillText = document.getElementById('authPillText');
+        const themeToggle = document.getElementById('themeToggle');
+        const voiceBtn = document.getElementById('voiceBtn');
         const loginModal = document.getElementById('loginModal');
         const signupModal = document.getElementById('signupModal');
+        const issuesModal = document.getElementById('issuesModal');
+        const imageModal = document.getElementById('imageModal');
         const plansModal = document.getElementById('plansModal');
+        const paymentModal = document.getElementById('paymentModal');
         const forgotModal = document.getElementById('forgotModal');
         const profileModal = document.getElementById('profileModal');
         const closePlansIcon = document.getElementById('closePlansIcon');
+        const closeIssuesIcon = document.getElementById('closeIssuesIcon');
+        const closeImageIcon = document.getElementById('closeImageIcon');
+        const closePaymentIcon = document.getElementById('closePaymentIcon');
         const closeProfileIcon = document.getElementById('closeProfileIcon');
         const loginEmail = document.getElementById('loginEmail');
         const loginPassword = document.getElementById('loginPassword');
@@ -1033,6 +1260,7 @@ INDEX_HTML = """<!DOCTYPE html>
         const profileAvatarInput = document.getElementById('profileAvatarInput');
         const profileSaveBtn = document.getElementById('profileSaveBtn');
         const profileResetBtn = document.getElementById('profileResetBtn');
+        const registeredUsersList = document.getElementById('registeredUsersList');
         const closeSignup = document.getElementById('closeSignup');
         const closeSignupIcon = document.getElementById('closeSignupIcon');
         const signupError = document.getElementById('signupError');
@@ -1048,16 +1276,24 @@ INDEX_HTML = """<!DOCTYPE html>
         const menuSettings = document.getElementById('menuSettings');
         const menuHelp = document.getElementById('menuHelp');
         const menuLogout = document.getElementById('menuLogout');
+        const imagePrompt = document.getElementById('imagePrompt');
+        const imageGenerateBtn = document.getElementById('imageGenerateBtn');
+        const paymentPlanInfo = document.getElementById('paymentPlanInfo');
+        const planSelectButtons = document.querySelectorAll('.plan-select');
 
         // State
         let isGenerating = false;
         let shouldOfferPdfDownload = false;
+        let speechRecognizer = null;
+        let isListening = false;
 
         // Initialize
         window.onload = () => {
             loadHistory();
             refreshAuthUI();
             loadProfile();
+            loadTheme();
+            renderRegisteredUsers();
         };
 
         // --- CORE FUNCTIONS ---
@@ -1123,10 +1359,6 @@ INDEX_HTML = """<!DOCTYPE html>
         function addMessageToUI(text, sender) {
             const div = document.createElement('div');
             div.className = `msg-row ${sender}`;
-            const messageIndex = sender === 'user'
-                ? `Q${document.querySelectorAll('.msg-row.user').length + 1}: `
-                : '';
-            
             // Markdown Parsing (Basic)
             let formattedText = text
                 .replace(/</g, "&lt;")
@@ -1153,7 +1385,7 @@ INDEX_HTML = """<!DOCTYPE html>
                     ${sender === 'bot' ? '<i class="fas fa-cube"></i>' : '<i class="fas fa-user"></i>'}
                 </div>
                 <div class="bubble">
-                    ${messageIndex}${formattedText}
+                    ${formattedText}
                     ${downloadButton}
                 </div>
             `;
@@ -1280,6 +1512,49 @@ INDEX_HTML = """<!DOCTYPE html>
             location.reload();
         }
 
+        function loadTheme() {
+            const storedTheme = localStorage.getItem('ruhvaan_theme') || 'dark';
+            applyTheme(storedTheme);
+            if (themeToggle) {
+                themeToggle.checked = storedTheme === 'light';
+            }
+        }
+
+        function applyTheme(theme) {
+            if (theme === 'light') {
+                document.body.classList.add('theme-light');
+            } else {
+                document.body.classList.remove('theme-light');
+            }
+            localStorage.setItem('ruhvaan_theme', theme);
+        }
+
+        function getRegisteredUsers() {
+            return JSON.parse(localStorage.getItem('ruhvaan_registered_users') || '[]');
+        }
+
+        function recordRegistration(email) {
+            if (!email) return;
+            const users = getRegisteredUsers();
+            if (!users.find((user) => user.email === email)) {
+                users.unshift({ email, time: new Date().toISOString() });
+                localStorage.setItem('ruhvaan_registered_users', JSON.stringify(users.slice(0, 20)));
+            }
+            renderRegisteredUsers();
+        }
+
+        function renderRegisteredUsers() {
+            if (!registeredUsersList) return;
+            const users = getRegisteredUsers();
+            if (users.length === 0) {
+                registeredUsersList.textContent = "No registrations yet.";
+                return;
+            }
+            registeredUsersList.innerHTML = users
+                .map((user) => `<div>• ${user.email}</div>`)
+                .join('');
+        }
+
         function getGuestCount() {
             return parseInt(localStorage.getItem('ruhvaan_guest_count') || '0', 10);
         }
@@ -1335,6 +1610,8 @@ INDEX_HTML = """<!DOCTYPE html>
             signupModal.classList.remove('active');
             forgotModal.classList.remove('active');
             profileModal.classList.remove('active');
+            imageModal.classList.remove('active');
+            paymentModal.classList.remove('active');
         }
 
         function hideLoginModal() {
@@ -1353,6 +1630,8 @@ INDEX_HTML = """<!DOCTYPE html>
             loginModal.classList.remove('active');
             forgotModal.classList.remove('active');
             profileModal.classList.remove('active');
+            imageModal.classList.remove('active');
+            paymentModal.classList.remove('active');
         }
 
         function hideSignupModal() {
@@ -1370,6 +1649,8 @@ INDEX_HTML = """<!DOCTYPE html>
             forgotModal.classList.add('active');
             signupModal.classList.remove('active');
             loginModal.classList.remove('active');
+            imageModal.classList.remove('active');
+            paymentModal.classList.remove('active');
         }
 
         function hideForgotModal() {
@@ -1395,6 +1676,7 @@ INDEX_HTML = """<!DOCTYPE html>
             const avatar = localStorage.getItem('ruhvaan_profile_avatar') || 'https://i.imgur.com/8Km9tLL.png';
             profileAvatar.src = avatar;
             userMenuAvatar.src = avatar;
+            renderRegisteredUsers();
         }
 
         function saveProfile() {
@@ -1436,6 +1718,35 @@ INDEX_HTML = """<!DOCTYPE html>
 
         function hidePlansModal() {
             plansModal.classList.remove('active');
+        }
+
+        function showIssuesModal() {
+            issuesModal.classList.add('active');
+        }
+
+        function hideIssuesModal() {
+            issuesModal.classList.remove('active');
+        }
+
+        function showImageModal() {
+            imageModal.classList.add('active');
+        }
+
+        function hideImageModal() {
+            imageModal.classList.remove('active');
+        }
+
+        function showPaymentModal(planName = 'Premium', priceLabel = '') {
+            if (paymentPlanInfo) {
+                paymentPlanInfo.textContent = priceLabel
+                    ? `${planName} selected • ${priceLabel}`
+                    : `${planName} selected`;
+            }
+            paymentModal.classList.add('active');
+        }
+
+        function hidePaymentModal() {
+            paymentModal.classList.remove('active');
         }
 
         // --- NEW: Non-blocking module animation (replaces alert popups) ---
@@ -1492,6 +1803,48 @@ INDEX_HTML = """<!DOCTYPE html>
             setTimeout(()=> { toast.remove(); }, 1500);
         }
 
+        function setupVoiceInput() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                return null;
+            }
+            const recognizer = new SpeechRecognition();
+            recognizer.lang = 'en-IN';
+            recognizer.continuous = false;
+            recognizer.interimResults = false;
+            recognizer.onresult = (event) => {
+                const transcript = event.results?.[0]?.[0]?.transcript || '';
+                if (transcript) {
+                    userInput.value = transcript;
+                    resizeTextarea();
+                }
+            };
+            recognizer.onend = () => {
+                isListening = false;
+                if (voiceBtn) voiceBtn.classList.remove('active');
+            };
+            return recognizer;
+        }
+
+        function toggleVoiceInput() {
+            if (!speechRecognizer) {
+                speechRecognizer = setupVoiceInput();
+            }
+            if (!speechRecognizer) {
+                showTinyToast("Voice input not supported on this device.");
+                return;
+            }
+            if (isListening) {
+                speechRecognizer.stop();
+                isListening = false;
+                voiceBtn?.classList.remove('active');
+                return;
+            }
+            isListening = true;
+            voiceBtn?.classList.add('active');
+            speechRecognizer.start();
+        }
+
         // --- Mascot interactions ---
         // mascot bounces and shows small tooltip when clicked
         if (mascot) {
@@ -1517,6 +1870,10 @@ INDEX_HTML = """<!DOCTYPE html>
         sendBtn.addEventListener('click', handleSend);
 
         userInput.addEventListener('input', resizeTextarea);
+
+        if (voiceBtn) {
+            voiceBtn.addEventListener('click', toggleVoiceInput);
+        }
 
         if (pdfBtn && pdfInput) {
             pdfBtn.addEventListener('click', () => pdfInput.click());
@@ -1552,11 +1909,16 @@ INDEX_HTML = """<!DOCTYPE html>
             });
         }
 
+        if (themeToggle) {
+            themeToggle.addEventListener('change', () => {
+                applyTheme(themeToggle.checked ? 'light' : 'dark');
+            });
+        }
+
         if (authPill) {
             authPill.addEventListener('click', () => {
                 if (isLoggedIn()) {
-                    clearAuth();
-                    showTinyToast("Logged out");
+                    showProfileModal();
                 } else {
                     showLoginModal();
                 }
@@ -1583,6 +1945,15 @@ INDEX_HTML = """<!DOCTYPE html>
         }
         if (closePlansIcon) {
             closePlansIcon.addEventListener('click', hidePlansModal);
+        }
+        if (closeIssuesIcon) {
+            closeIssuesIcon.addEventListener('click', hideIssuesModal);
+        }
+        if (closeImageIcon) {
+            closeImageIcon.addEventListener('click', hideImageModal);
+        }
+        if (closePaymentIcon) {
+            closePaymentIcon.addEventListener('click', hidePaymentModal);
         }
         if (openSignup) {
             openSignup.addEventListener('click', () => showSignupModal());
@@ -1619,6 +1990,27 @@ INDEX_HTML = """<!DOCTYPE html>
                     }
                 };
                 reader.readAsDataURL(file);
+            });
+        }
+        if (planSelectButtons.length) {
+            planSelectButtons.forEach((button) => {
+                button.addEventListener('click', () => {
+                    const planName = button.dataset.plan || 'Premium';
+                    const price = button.dataset.price || '';
+                    showPaymentModal(planName, price);
+                });
+            });
+        }
+        if (imageGenerateBtn) {
+            imageGenerateBtn.addEventListener('click', () => {
+                const prompt = imagePrompt?.value?.trim() || '';
+                if (!prompt) {
+                    showTinyToast("Add an image prompt first.");
+                    return;
+                }
+                hideImageModal();
+                addMessageToUI(`🖼️ Image request: ${prompt}`, 'user');
+                addMessageToUI("Image generation is queued. This will show once enabled.", 'bot');
             });
         }
         if (userMenuBtn && userMenuDropdown) {
@@ -1707,6 +2099,7 @@ INDEX_HTML = """<!DOCTYPE html>
                     }
                     const data = await response.json();
                     setAuth(data.token, data.email);
+                    recordRegistration(data.email);
                     hideSignupModal();
                     showTinyToast("Account created.");
                 } catch (error) {
