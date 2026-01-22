@@ -798,8 +798,19 @@ INDEX_HTML = """<!DOCTYPE html>
             :root { --chat-padding-inline: 5%; }
             .chat-container { padding: 20px var(--chat-padding-inline); }
             .input-section { padding: 20px 10px; }
-            .header { padding: 0 20px; }
+            .header {
+                padding: 12px 16px;
+                height: auto;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
             .header-title { font-size: 16px; }
+            .status-badge {
+                padding: 4px 8px;
+                font-size: 11px;
+            }
+            .user-menu-btn span { display: none; }
+            .auth-pill span { display: none; }
             .mobile-menu-btn { display: block !important; }
             .mascot { left: calc(var(--chat-padding-inline) + 4px); bottom: 110px; } /* avoid input area on small screens */
             .mobile-back-btn { display: flex; }
