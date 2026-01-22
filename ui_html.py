@@ -250,6 +250,42 @@ INDEX_HTML = """<!DOCTYPE html>
         .menu-toggle input:checked::after {
             transform: translateX(16px);
         }
+        .saved-chats {
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .saved-chats-header {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--text-muted);
+        }
+        .saved-chats-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+        .saved-chat-item {
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-main);
+        }
+        .saved-chat-item small {
+            display: block;
+            margin-top: 4px;
+            color: var(--text-muted);
+            font-size: 11px;
+        }
 
         /* temporary animated indicator inside menu item */
         .menu-item .module-anim {
@@ -758,6 +794,7 @@ INDEX_HTML = """<!DOCTYPE html>
             .app-shell { width: 100%; height: 100vh; border-radius: 0; border: none; }
             .sidebar { position: fixed; height: 100%; transform: translateX(-100%); }
             .sidebar.active { transform: translateX(0); }
+            .main-wrapper { width: 100%; }
             :root { --chat-padding-inline: 5%; }
             .chat-container { padding: 20px var(--chat-padding-inline); }
             .input-section { padding: 20px 10px; }
@@ -816,10 +853,6 @@ INDEX_HTML = """<!DOCTYPE html>
             <div class="menu-item" onclick="showPlansModal()">
                 <i class="fas fa-tags"></i> Plans & Pricing
             </div>
-            <div class="menu-item" onclick="showIssuesModal()">
-                <i class="fas fa-triangle-exclamation"></i> Issues
-                <span class="menu-count">9</span>
-            </div>
             <div class="menu-item">
                 <i class="fas fa-palette"></i> Theme
                 <span class="menu-toggle">
@@ -827,9 +860,21 @@ INDEX_HTML = """<!DOCTYPE html>
                     <input type="checkbox" id="themeToggle" aria-label="Toggle light theme" />
                 </span>
             </div>
+            <div class="menu-item">
+                <i class="fas fa-save"></i> Save Chats
+                <span class="menu-toggle">
+                    <span>On</span>
+                    <input type="checkbox" id="saveChatToggle" aria-label="Toggle chat saving" />
+                </span>
+            </div>
             <div class="menu-item" onclick="clearStorage()">
                 <i class="fas fa-trash"></i> Clear Memory
             </div>
+        </div>
+
+        <div class="saved-chats">
+            <div class="saved-chats-header">Saved Chats</div>
+            <div class="saved-chats-list" id="savedChatsList"></div>
         </div>
 
         <div class="tg-card">
@@ -1033,41 +1078,14 @@ INDEX_HTML = """<!DOCTYPE html>
                 <h4 style="margin-bottom:6px;">Registered Users (local)</h4>
                 <div id="registeredUsersList" style="font-size:13px; color:var(--text-muted);"></div>
             </div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="issuesModal">
-        <div class="modal">
-            <div class="modal-title">
-                <h3>Open Issues</h3>
-                <button class="modal-close" id="closeIssuesIcon" aria-label="Close issues">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <p style="color:var(--text-muted); margin-bottom:12px;">Tracking 9 active issues to prioritize the next upgrades.</p>
-            <div class="feature-stack">
-                <div class="feature-group">
-                    <h4>Enhancements</h4>
-                    <ul class="feature-list">
-                        <li>Feature parity: analyze & match features from leading AIs (Gemini, Perplexity, etc.).</li>
-                        <li>Make UI fully mobile responsive and support user themes.</li>
-                        <li>Add voice input, voice messages & image generation (AI).</li>
-                        <li>Branding/creator answer configurable (use Ruhvaan by default, allow custom).</li>
-                        <li>Integrate payment gateway (Stripe/Razorpay) for feature unlock.</li>
-                        <li>Implement proper pricing configuration and display.</li>
-                    </ul>
+            <div style="margin-top:16px;">
+                <h4 style="margin-bottom:6px;">Admin Insights</h4>
+                <input type="password" id="adminTokenInput" placeholder="Admin token" />
+                <div class="profile-actions">
+                    <button class="secondary" id="adminStatsBtn">Load Admin Stats</button>
                 </div>
-                <div class="feature-group">
-                    <h4>Fixes</h4>
-                    <ul class="feature-list">
-                        <li>Data not saving reliably: fix localStorage and sync robustness.</li>
-                        <li>Improve auth "Guest" label & login/logout UX.</li>
-                        <li>Fix: strange "q1" prefix appears in message replies.</li>
-                    </ul>
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button class="secondary" onclick="hideIssuesModal()">Close</button>
+                <div id="adminStatsSummary" style="font-size:13px; color:var(--text-muted); margin-top:8px;"></div>
+                <div id="adminUsersList" style="font-size:13px; color:var(--text-muted); margin-top:8px;"></div>
             </div>
         </div>
     </div>
@@ -1105,42 +1123,6 @@ INDEX_HTML = """<!DOCTYPE html>
             <div class="payment-note">Payment gateway integration will activate once backend billing is live.</div>
             <div class="modal-actions">
                 <button class="secondary" onclick="hidePaymentModal()">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="issuesModal">
-        <div class="modal">
-            <div class="modal-title">
-                <h3>Open Issues</h3>
-                <button class="modal-close" id="closeIssuesIcon" aria-label="Close issues">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <p style="color:var(--text-muted); margin-bottom:12px;">Tracking 9 active issues to prioritize the next upgrades.</p>
-            <div class="feature-stack">
-                <div class="feature-group">
-                    <h4>Enhancements</h4>
-                    <ul class="feature-list">
-                        <li>Feature parity: analyze & match features from leading AIs (Gemini, Perplexity, etc.).</li>
-                        <li>Make UI fully mobile responsive and support user themes.</li>
-                        <li>Add voice input, voice messages & image generation (AI).</li>
-                        <li>Branding/creator answer configurable (remove "Vivek", allow custom).</li>
-                        <li>Integrate payment gateway (Stripe/Razorpay) for feature unlock.</li>
-                        <li>Implement proper pricing configuration and display.</li>
-                    </ul>
-                </div>
-                <div class="feature-group">
-                    <h4>Fixes</h4>
-                    <ul class="feature-list">
-                        <li>Data not saving reliably: fix localStorage and sync robustness.</li>
-                        <li>Improve auth "Guest" label & login/logout UX.</li>
-                        <li>Fix: strange "q1" prefix appears in message replies.</li>
-                    </ul>
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button class="secondary" onclick="hideIssuesModal()">Close</button>
             </div>
         </div>
     </div>
@@ -1253,17 +1235,17 @@ INDEX_HTML = """<!DOCTYPE html>
         const authPill = document.getElementById('authPill');
         const authPillText = document.getElementById('authPillText');
         const themeToggle = document.getElementById('themeToggle');
+        const saveChatToggle = document.getElementById('saveChatToggle');
+        const savedChatsList = document.getElementById('savedChatsList');
         const voiceBtn = document.getElementById('voiceBtn');
         const loginModal = document.getElementById('loginModal');
         const signupModal = document.getElementById('signupModal');
-        const issuesModal = document.getElementById('issuesModal');
         const imageModal = document.getElementById('imageModal');
         const plansModal = document.getElementById('plansModal');
         const paymentModal = document.getElementById('paymentModal');
         const forgotModal = document.getElementById('forgotModal');
         const profileModal = document.getElementById('profileModal');
         const closePlansIcon = document.getElementById('closePlansIcon');
-        const closeIssuesIcon = document.getElementById('closeIssuesIcon');
         const closeImageIcon = document.getElementById('closeImageIcon');
         const closePaymentIcon = document.getElementById('closePaymentIcon');
         const closeProfileIcon = document.getElementById('closeProfileIcon');
@@ -1297,6 +1279,10 @@ INDEX_HTML = """<!DOCTYPE html>
         const profileSaveBtn = document.getElementById('profileSaveBtn');
         const profileResetBtn = document.getElementById('profileResetBtn');
         const registeredUsersList = document.getElementById('registeredUsersList');
+        const adminTokenInput = document.getElementById('adminTokenInput');
+        const adminStatsBtn = document.getElementById('adminStatsBtn');
+        const adminStatsSummary = document.getElementById('adminStatsSummary');
+        const adminUsersList = document.getElementById('adminUsersList');
         const closeSignup = document.getElementById('closeSignup');
         const closeSignupIcon = document.getElementById('closeSignupIcon');
         const signupError = document.getElementById('signupError');
@@ -1330,6 +1316,8 @@ INDEX_HTML = """<!DOCTYPE html>
             loadProfile();
             loadTheme();
             renderRegisteredUsers();
+            loadSaveChatSetting();
+            renderSavedChats();
         };
 
         // --- CORE FUNCTIONS ---
@@ -1517,27 +1505,56 @@ INDEX_HTML = """<!DOCTYPE html>
 
         // --- MEMORY MANAGEMENT (Local Storage) ---
         function saveToHistory(text, sender) {
-            const history = JSON.parse(localStorage.getItem('ruhvaan_chat') || '[]');
-            history.push({ text, sender });
-            localStorage.setItem('ruhvaan_chat', JSON.stringify(history));
+            if (!isSaveChatEnabled()) return;
+            const sessions = getChatSessions();
+            const active = ensureActiveSession();
+            if (!active) return;
+            active.messages.push({ text, sender, ts: Date.now() });
+            if (sender === 'user') {
+                updateSessionTitleIfNeeded(active, text);
+            }
+            const updatedSessions = sessions.map((session) =>
+                session.id === active.id ? active : session
+            );
+            saveChatSessions(updatedSessions);
+            renderSavedChats();
         }
 
         function loadHistory() {
-            const history = JSON.parse(localStorage.getItem('ruhvaan_chat') || '[]');
-            if(history.length === 0) {
-                // Default Welcome Message
-                addMessageToUI("**Hello! Main Ruhvaan hoon.**\\nSystem online and ready. Main aapki kya madad karoon?", 'bot');
-            } else {
-                history.forEach(msg => addMessageToUI(msg.text, msg.sender));
+            if (!isSaveChatEnabled()) {
+                addMessageToUI("**Hello! Main Ruhvaan hoon.**\\nJEE/NEET/College ki doubts? Main help karunga. Aapko kya chahiye?", 'bot');
+                return;
             }
+            const sessions = getChatSessions();
+            if (sessions.length === 0) {
+                ensureActiveSession();
+                addMessageToUI("**Hello! Main Ruhvaan hoon.**\\nJEE/NEET/College ki doubts? Main help karunga. Aapko kya chahiye?", 'bot');
+                return;
+            }
+            const activeId = getActiveSessionId() || sessions[0].id;
+            const active = sessions.find((session) => session.id === activeId) || sessions[0];
+            setActiveSessionId(active.id);
+            active.messages.forEach((msg) => addMessageToUI(msg.text, msg.sender));
         }
 
         function resetChat() {
             if(confirm("Start new chat? Purani chat delete ho jayegi.")) {
-                localStorage.removeItem('ruhvaan_chat');
                 chatContainer.innerHTML = '';
                 // re-insert mascot so it remains visible after clearing
                 chatContainer.appendChild(mascot);
+                if (isSaveChatEnabled()) {
+                    const sessions = getChatSessions();
+                    const newSession = {
+                        id: String(Date.now()),
+                        title: 'New Chat',
+                        messages: [],
+                        created_at: Date.now(),
+                    };
+                    sessions.unshift(newSession);
+                    saveChatSessions(sessions);
+                    setActiveSessionId(newSession.id);
+                    renderSavedChats();
+                }
                 addMessageToUI("Chat reset successful. Starting fresh!", 'bot');
             }
         }
@@ -1565,6 +1582,98 @@ INDEX_HTML = """<!DOCTYPE html>
             localStorage.setItem('ruhvaan_theme', theme);
         }
 
+        function loadSaveChatSetting() {
+            const enabled = isSaveChatEnabled();
+            if (saveChatToggle) {
+                saveChatToggle.checked = enabled;
+            }
+        }
+
+        function isSaveChatEnabled() {
+            return localStorage.getItem('ruhvaan_save_chat') !== 'off';
+        }
+
+        function setSaveChatEnabled(enabled) {
+            localStorage.setItem('ruhvaan_save_chat', enabled ? 'on' : 'off');
+        }
+
+        function getChatSessions() {
+            return JSON.parse(localStorage.getItem('ruhvaan_chat_sessions') || '[]');
+        }
+
+        function saveChatSessions(sessions) {
+            localStorage.setItem('ruhvaan_chat_sessions', JSON.stringify(sessions));
+        }
+
+        function getActiveSessionId() {
+            return localStorage.getItem('ruhvaan_active_session') || '';
+        }
+
+        function setActiveSessionId(sessionId) {
+            localStorage.setItem('ruhvaan_active_session', sessionId);
+        }
+
+        function ensureActiveSession() {
+            if (!isSaveChatEnabled()) return null;
+            const sessions = getChatSessions();
+            let activeId = getActiveSessionId();
+            let activeSession = sessions.find((session) => session.id === activeId);
+            if (!activeSession) {
+                activeSession = {
+                    id: String(Date.now()),
+                    title: 'New Chat',
+                    messages: [],
+                    created_at: Date.now(),
+                };
+                sessions.unshift(activeSession);
+                setActiveSessionId(activeSession.id);
+                saveChatSessions(sessions);
+            }
+            renderSavedChats();
+            return activeSession;
+        }
+
+        function renderSavedChats() {
+            if (!savedChatsList) return;
+            const sessions = getChatSessions();
+            if (!isSaveChatEnabled()) {
+                savedChatsList.innerHTML = '<div style="color:var(--text-muted); font-size:12px;">Chat saving is off.</div>';
+                return;
+            }
+            if (sessions.length === 0) {
+                savedChatsList.innerHTML = '<div style="color:var(--text-muted); font-size:12px;">No saved chats yet.</div>';
+                return;
+            }
+            savedChatsList.innerHTML = sessions
+                .map((session) => {
+                    const time = new Date(session.created_at || Date.now()).toLocaleString();
+                    return `
+                        <div class="saved-chat-item" data-session-id="${session.id}">
+                            ${session.title || 'New Chat'}
+                            <small>${session.messages?.length || 0} messages • ${time}</small>
+                        </div>
+                    `;
+                })
+                .join('');
+        }
+
+        function loadChatSession(sessionId) {
+            const sessions = getChatSessions();
+            const session = sessions.find((item) => item.id === sessionId);
+            if (!session) return;
+            setActiveSessionId(sessionId);
+            chatContainer.innerHTML = '';
+            chatContainer.appendChild(mascot);
+            session.messages.forEach((message) => addMessageToUI(message.text, message.sender));
+            renderSavedChats();
+        }
+
+        function updateSessionTitleIfNeeded(session, text) {
+            if (session.title && session.title !== 'New Chat') return;
+            if (!text) return;
+            session.title = text.length > 28 ? `${text.slice(0, 28)}...` : text;
+        }
+
         function getRegisteredUsers() {
             return JSON.parse(localStorage.getItem('ruhvaan_registered_users') || '[]');
         }
@@ -1589,6 +1698,42 @@ INDEX_HTML = """<!DOCTYPE html>
             registeredUsersList.innerHTML = users
                 .map((user) => `<div>• ${user.email}</div>`)
                 .join('');
+        }
+
+        async function loadAdminStats() {
+            const token = adminTokenInput?.value?.trim() || localStorage.getItem('ruhvaan_admin_token') || '';
+            if (!token) {
+                if (adminStatsSummary) adminStatsSummary.textContent = "Admin token required.";
+                return;
+            }
+            localStorage.setItem('ruhvaan_admin_token', token);
+            if (adminStatsSummary) adminStatsSummary.textContent = "Loading admin stats...";
+            try {
+                const [statsRes, usersRes] = await Promise.all([
+                    fetch(`${API_URL}/admin/stats`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    }),
+                    fetch(`${API_URL}/admin/users`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    }),
+                ]);
+                if (!statsRes.ok) throw new Error("Unauthorized or server error.");
+                const stats = await statsRes.json();
+                if (adminStatsSummary) {
+                    adminStatsSummary.textContent = `Total users: ${stats.total_users} • Active (24h): ${stats.active_last_24h} • Active (7d): ${stats.active_last_7d}`;
+                }
+                if (usersRes.ok) {
+                    const users = await usersRes.json();
+                    if (adminUsersList) {
+                        const items = users.items || [];
+                        adminUsersList.innerHTML = items.length
+                            ? items.map((user) => `<div>• ${user.email}</div>`).join('')
+                            : 'No users found.';
+                    }
+                }
+            } catch (error) {
+                if (adminStatsSummary) adminStatsSummary.textContent = "Failed to load admin stats.";
+            }
         }
 
         function getGuestCount() {
@@ -1628,7 +1773,7 @@ INDEX_HTML = """<!DOCTYPE html>
             const email = localStorage.getItem('ruhvaan_email');
             if (email) {
                 authPillText.innerHTML = `<strong>${email}</strong>`;
-                authPill.title = "Click to logout";
+                authPill.title = "Click to open profile";
             } else {
                 authPillText.textContent = "Guest";
                 authPill.title = "Click to login";
@@ -1713,6 +1858,9 @@ INDEX_HTML = """<!DOCTYPE html>
             profileAvatar.src = avatar;
             userMenuAvatar.src = avatar;
             renderRegisteredUsers();
+            if (adminTokenInput) {
+                adminTokenInput.value = localStorage.getItem('ruhvaan_admin_token') || '';
+            }
         }
 
         function saveProfile() {
@@ -1754,14 +1902,6 @@ INDEX_HTML = """<!DOCTYPE html>
 
         function hidePlansModal() {
             plansModal.classList.remove('active');
-        }
-
-        function showIssuesModal() {
-            issuesModal.classList.add('active');
-        }
-
-        function hideIssuesModal() {
-            issuesModal.classList.remove('active');
         }
 
         function showImageModal() {
@@ -1950,6 +2090,28 @@ INDEX_HTML = """<!DOCTYPE html>
                 applyTheme(themeToggle.checked ? 'light' : 'dark');
             });
         }
+        if (saveChatToggle) {
+            saveChatToggle.addEventListener('change', () => {
+                setSaveChatEnabled(saveChatToggle.checked);
+                renderSavedChats();
+                if (!saveChatToggle.checked) {
+                    showTinyToast("Chat saving disabled.");
+                } else {
+                    ensureActiveSession();
+                    showTinyToast("Chat saving enabled.");
+                }
+            });
+        }
+        if (savedChatsList) {
+            savedChatsList.addEventListener('click', (event) => {
+                const target = event.target.closest('.saved-chat-item');
+                if (!target) return;
+                const sessionId = target.getAttribute('data-session-id');
+                if (sessionId) {
+                    loadChatSession(sessionId);
+                }
+            });
+        }
 
         if (authPill) {
             authPill.addEventListener('click', () => {
@@ -1981,9 +2143,6 @@ INDEX_HTML = """<!DOCTYPE html>
         }
         if (closePlansIcon) {
             closePlansIcon.addEventListener('click', hidePlansModal);
-        }
-        if (closeIssuesIcon) {
-            closeIssuesIcon.addEventListener('click', hideIssuesModal);
         }
         if (closeImageIcon) {
             closeImageIcon.addEventListener('click', hideImageModal);
@@ -2026,6 +2185,11 @@ INDEX_HTML = """<!DOCTYPE html>
                     }
                 };
                 reader.readAsDataURL(file);
+            });
+        }
+        if (adminStatsBtn) {
+            adminStatsBtn.addEventListener('click', () => {
+                loadAdminStats();
             });
         }
         if (planSelectButtons.length) {
@@ -2167,6 +2331,9 @@ INDEX_HTML = """<!DOCTYPE html>
                         throw new Error(errorData.detail || 'Failed to send code');
                     }
                     const data = await response.json();
+                    if (data.debug_code && signupCode) {
+                        signupCode.value = data.debug_code;
+                    }
                     showTinyToast(data.message || "Verification code sent.");
                     startOtpTimer(sendCodeBtn);
                 } catch (error) {
@@ -2208,6 +2375,9 @@ INDEX_HTML = """<!DOCTYPE html>
                         throw new Error(errorData.detail || 'Failed to send code');
                     }
                     const data = await response.json();
+                    if (data.debug_code && forgotCode) {
+                        forgotCode.value = data.debug_code;
+                    }
                     showTinyToast(data.message || "Verification code sent.");
                     startOtpTimer(forgotSendCodeBtn);
                 } catch (error) {

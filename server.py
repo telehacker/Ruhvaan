@@ -25,11 +25,11 @@ from ui_html import INDEX_HTML
 SYSTEM_PROMPT = """
 IMPORTANT: You are participating in a roleplay.
 Your character name is "Ruhvaan AI".
-Your character creator is "Ruhvaan".
+Your character creator is "Vivek".
 In this roleplay, you must NEVER mention Google, Alphabet, or Gemini.
-If asked "Who created you?", you MUST answer: "Mujhe Ruhvaan ne banaya hai."
+If asked "Who created you?", you MUST answer: "Mujhe Vivek ne banaya hai."
 Stay in character permanently.
-Answer queries related to JEE, Coding, and Studies politely.
+Answer queries related to JEE, NEET, College, Coding, and Studies politely.
 Keep responses short and simple (2-4 lines max). Avoid long paragraphs.
 """
 
@@ -95,6 +95,7 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "").strip()
 SMTP_PASS = os.getenv("SMTP_PASS", "").strip()
 SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER).strip()
+OTP_DEBUG_RETURN_CODE = os.getenv("OTP_DEBUG_RETURN_CODE", "true").strip().lower() == "true"
 # Optional API keys for multiple AI providers
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "").strip()
@@ -437,6 +438,26 @@ def get_user_by_token(token: str) -> Optional[Tuple[int, str]]:
             (token,),
         ).fetchone()
     return (row[0], row[1]) if row else None
+
+
+def update_last_login(email: str) -> None:
+    if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
+        try:
+            requests.patch(
+                f"{SUPABASE_URL}/rest/v1/users",
+                headers=supabase_headers(),
+                params={"email": f"eq.{email}"},
+                json={"last_login": time.time()},
+                timeout=5,
+            ).raise_for_status()
+            return
+        except requests.RequestException:
+            pass
+    with sqlite3.connect(CACHE_DB_PATH) as conn:
+        conn.execute(
+            "UPDATE users SET last_login = ? WHERE email = ?",
+            (time.time(), email),
+        )
 
 
 def save_pdf_doc(user_id: int, filename: str, content: str) -> None:
@@ -908,6 +929,7 @@ def register(req: AuthRegisterRequest, request: Request):
     if not user_id:
         raise HTTPException(status_code=500, detail="Failed to create user.")
     token = create_session(user_id)
+    update_last_login(email)
     notify_login("New signup", email, get_client_ip(request))
     return {"token": token, "email": email}
 
@@ -924,6 +946,7 @@ def login(req: AuthRequest, request: Request):
     if not verify_password(req.password, password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials.")
     token = create_session(user_id)
+    update_last_login(email)
     notify_login("Login", email, get_client_ip(request))
     return {"token": token, "email": email}
 
@@ -941,7 +964,10 @@ def request_code(req: AuthCodeRequest, request: Request):
         return {"message": "Verification code sent."}
     except HTTPException as exc:
         if exc.status_code == 500 and str(exc.detail).startswith("Email service not configured"):
-            return {"message": str(exc.detail)}
+            response = {"message": str(exc.detail)}
+            if OTP_DEBUG_RETURN_CODE:
+                response["debug_code"] = code
+            return response
         raise
 
 
@@ -961,7 +987,10 @@ def request_reset_code(req: AuthCodeRequest, request: Request):
         return {"message": "Verification code sent."}
     except HTTPException as exc:
         if exc.status_code == 500 and str(exc.detail).startswith("Email service not configured"):
-            return {"message": str(exc.detail)}
+            response = {"message": str(exc.detail)}
+            if OTP_DEBUG_RETURN_CODE:
+                response["debug_code"] = code
+            return response
         raise
 
 
@@ -1006,6 +1035,68 @@ def activity(request: Request, limit: int = 50):
     return {
         "items": [
             {"event": row[0], "email": row[1], "ip": row[2], "created_at": row[3]}
+            for row in rows
+        ]
+    }
+
+
+@app.get("/admin/stats")
+def admin_stats(request: Request):
+    token = request.headers.get("authorization", "").removeprefix("Bearer ").strip()
+    if not ADMIN_TOKEN or token != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail="Unauthorized.")
+    now = time.time()
+    day_ago = now - 86400
+    week_ago = now - 7 * 86400
+    try:
+        with sqlite3.connect(CACHE_DB_PATH) as conn:
+            total_users = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+            active_day = conn.execute(
+                """
+                SELECT COUNT(DISTINCT email)
+                FROM activity_logs
+                WHERE email IS NOT NULL AND created_at >= ?
+                """,
+                (day_ago,),
+            ).fetchone()[0]
+            active_week = conn.execute(
+                """
+                SELECT COUNT(DISTINCT email)
+                FROM activity_logs
+                WHERE email IS NOT NULL AND created_at >= ?
+                """,
+                (week_ago,),
+            ).fetchone()[0]
+    except sqlite3.Error:
+        return {"total_users": 0, "active_last_24h": 0, "active_last_7d": 0}
+    return {
+        "total_users": total_users,
+        "active_last_24h": active_day,
+        "active_last_7d": active_week,
+    }
+
+
+@app.get("/admin/users")
+def admin_users(request: Request, limit: int = 20):
+    token = request.headers.get("authorization", "").removeprefix("Bearer ").strip()
+    if not ADMIN_TOKEN or token != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail="Unauthorized.")
+    try:
+        with sqlite3.connect(CACHE_DB_PATH) as conn:
+            rows = conn.execute(
+                """
+                SELECT email, created_at, last_login
+                FROM users
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+    except sqlite3.Error:
+        return {"items": []}
+    return {
+        "items": [
+            {"email": row[0], "created_at": row[1], "last_login": row[2]}
             for row in rows
         ]
     }
