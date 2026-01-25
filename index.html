@@ -65,6 +65,45 @@
             --border: rgba(15, 23, 42, 0.12);
             --success: #16a34a;
         }
+        body.theme-synth {
+            --bg-deep: #0a0018;
+            --bg-panel: #130027;
+            --bg-chat: #0f0222;
+            --primary: #ff4fd8;
+            --primary-dim: rgba(255, 79, 216, 0.15);
+            --primary-glow: rgba(255, 79, 216, 0.5);
+            --accent: #38bdf8;
+            --text-main: #f9eaff;
+            --text-muted: #b78dd9;
+            --border: rgba(255, 79, 216, 0.18);
+            --success: #22c55e;
+        }
+        body.theme-emerald {
+            --bg-deep: #001312;
+            --bg-panel: #05221f;
+            --bg-chat: #041b19;
+            --primary: #22c55e;
+            --primary-dim: rgba(34, 197, 94, 0.14);
+            --primary-glow: rgba(34, 197, 94, 0.4);
+            --accent: #14b8a6;
+            --text-main: #e6fffb;
+            --text-muted: #93c5c5;
+            --border: rgba(34, 197, 94, 0.2);
+            --success: #22c55e;
+        }
+        body.theme-slate {
+            --bg-deep: #0b1120;
+            --bg-panel: #111827;
+            --bg-chat: #0f172a;
+            --primary: #60a5fa;
+            --primary-dim: rgba(96, 165, 250, 0.14);
+            --primary-glow: rgba(96, 165, 250, 0.35);
+            --accent: #a78bfa;
+            --text-main: #f8fafc;
+            --text-muted: #9ca3af;
+            --border: rgba(148, 163, 184, 0.2);
+            --success: #22c55e;
+        }
 
         .app-shell {
             width: min(1400px, 100%);
@@ -874,6 +913,10 @@
                     <input type="checkbox" id="themeToggle" aria-label="Toggle light theme" />
                 </span>
             </div>
+            <div class="menu-item" onclick="showThemeModal()">
+                <i class="fas fa-wand-magic-sparkles"></i> UI Styles
+                <span class="coming-soon">New</span>
+            </div>
             <div class="menu-item">
                 <i class="fas fa-save"></i> Save Chats
                 <span class="menu-toggle">
@@ -1127,6 +1170,32 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="themeModal">
+        <div class="modal">
+            <div class="modal-title">
+                <h3>Choose Your UI</h3>
+                <button class="modal-close" id="closeThemeIcon" aria-label="Close UI styles">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <p>Pick a UI style that matches your vibe.</p>
+            <div class="feature-stack" style="margin-top:12px;">
+                <div class="feature-group">
+                    <ul class="feature-list">
+                        <li><button class="secondary" style="width:100%;" onclick="setTheme('dark')">Midnight (Default)</button></li>
+                        <li><button class="secondary" style="width:100%;" onclick="setTheme('light')">Snowlight</button></li>
+                        <li><button class="secondary" style="width:100%;" onclick="setTheme('synth')">Synthwave</button></li>
+                        <li><button class="secondary" style="width:100%;" onclick="setTheme('emerald')">Emerald</button></li>
+                        <li><button class="secondary" style="width:100%;" onclick="setTheme('slate')">Slate</button></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="secondary" onclick="hideThemeModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="paymentModal">
         <div class="modal">
             <div class="modal-title">
@@ -1275,6 +1344,7 @@
         const loginModal = document.getElementById('loginModal');
         const signupModal = document.getElementById('signupModal');
         const imageModal = document.getElementById('imageModal');
+        const themeModal = document.getElementById('themeModal');
         const plansModal = document.getElementById('plansModal');
         const paymentModal = document.getElementById('paymentModal');
         const forgotModal = document.getElementById('forgotModal');
@@ -1283,6 +1353,7 @@
         const closeImageIcon = document.getElementById('closeImageIcon');
         const closePaymentIcon = document.getElementById('closePaymentIcon');
         const closeProfileIcon = document.getElementById('closeProfileIcon');
+        const closeThemeIcon = document.getElementById('closeThemeIcon');
         const loginEmail = document.getElementById('loginEmail');
         const loginPassword = document.getElementById('loginPassword');
         const loginBtn = document.getElementById('loginBtn');
@@ -1606,19 +1677,26 @@
 
         function loadTheme() {
             const storedTheme = localStorage.getItem('ruhvaan_theme') || 'dark';
-            applyTheme(storedTheme);
+            setTheme(storedTheme);
             if (themeToggle) {
                 themeToggle.checked = storedTheme === 'light';
             }
         }
 
         function applyTheme(theme) {
-            if (theme === 'light') {
-                document.body.classList.add('theme-light');
-            } else {
-                document.body.classList.remove('theme-light');
-            }
+            document.body.classList.remove('theme-light', 'theme-synth', 'theme-emerald', 'theme-slate');
+            if (theme === 'light') document.body.classList.add('theme-light');
+            if (theme === 'synth') document.body.classList.add('theme-synth');
+            if (theme === 'emerald') document.body.classList.add('theme-emerald');
+            if (theme === 'slate') document.body.classList.add('theme-slate');
+        }
+
+        function setTheme(theme) {
+            applyTheme(theme);
             localStorage.setItem('ruhvaan_theme', theme);
+            if (themeToggle) {
+                themeToggle.checked = theme === 'light';
+            }
         }
 
         function loadSaveChatSetting() {
@@ -1958,6 +2036,14 @@
             imageModal.classList.remove('active');
         }
 
+        function showThemeModal() {
+            themeModal.classList.add('active');
+        }
+
+        function hideThemeModal() {
+            themeModal.classList.remove('active');
+        }
+
         function showPaymentModal(planName = 'Premium', priceLabel = '') {
             if (paymentPlanInfo) {
                 paymentPlanInfo.textContent = priceLabel
@@ -2192,6 +2278,9 @@
         }
         if (closeImageIcon) {
             closeImageIcon.addEventListener('click', hideImageModal);
+        }
+        if (closeThemeIcon) {
+            closeThemeIcon.addEventListener('click', hideThemeModal);
         }
         if (closePaymentIcon) {
             closePaymentIcon.addEventListener('click', hidePaymentModal);
