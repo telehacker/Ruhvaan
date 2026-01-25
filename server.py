@@ -296,8 +296,9 @@ def get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-RATE_LIMIT_WINDOW_S = 60
-RATE_LIMIT_MAX = 20
+RATE_LIMIT_WINDOW_S = int(os.getenv("RATE_LIMIT_WINDOW_S", "60"))
+RATE_LIMIT_MAX = int(os.getenv("RATE_LIMIT_MAX", "20"))
+RATE_LIMIT_MAX_GUEST = int(os.getenv("RATE_LIMIT_MAX_GUEST", "10"))
 _RATE_LIMIT_BUCKET: Dict[str, List[float]] = {}
 _RATE_LIMIT_BUCKET_TOKEN: Dict[str, List[float]] = {}
 
@@ -309,12 +310,13 @@ def get_bearer_token(request: Request) -> str:
 def enforce_rate_limit(request: Request) -> None:
     now = time.time()
     ip = get_client_ip(request)
+    token = get_bearer_token(request)
     bucket = [ts for ts in _RATE_LIMIT_BUCKET.get(ip, []) if now - ts < RATE_LIMIT_WINDOW_S]
-    if len(bucket) >= RATE_LIMIT_MAX:
+    ip_limit = RATE_LIMIT_MAX if token else RATE_LIMIT_MAX_GUEST
+    if len(bucket) >= ip_limit:
         raise HTTPException(status_code=429, detail="Too many requests. Please slow down.")
     bucket.append(now)
     _RATE_LIMIT_BUCKET[ip] = bucket
-    token = get_bearer_token(request)
     if token:
         token_bucket = [
             ts for ts in _RATE_LIMIT_BUCKET_TOKEN.get(token, []) if now - ts < RATE_LIMIT_WINDOW_S
