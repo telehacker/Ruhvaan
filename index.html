@@ -52,12 +52,79 @@
             overflow: hidden;
             font-size: 16px;
         }
+        body.theme-light {
+            --bg-deep: #f4f5f7;
+            --bg-panel: #ffffff;
+            --bg-chat: #f7f8fb;
+            --primary: #2563eb;
+            --primary-dim: rgba(37, 99, 235, 0.12);
+            --primary-glow: rgba(37, 99, 235, 0.35);
+            --accent: #7c3aed;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --border: rgba(15, 23, 42, 0.12);
+            --success: #16a34a;
+        }
+        body.theme-synth {
+            --bg-deep: #0a0018;
+            --bg-panel: #130027;
+            --bg-chat: #0f0222;
+            --primary: #ff4fd8;
+            --primary-dim: rgba(255, 79, 216, 0.15);
+            --primary-glow: rgba(255, 79, 216, 0.5);
+            --accent: #38bdf8;
+            --text-main: #f9eaff;
+            --text-muted: #b78dd9;
+            --border: rgba(255, 79, 216, 0.18);
+            --success: #22c55e;
+        }
+        body.theme-emerald {
+            --bg-deep: #001312;
+            --bg-panel: #05221f;
+            --bg-chat: #041b19;
+            --primary: #22c55e;
+            --primary-dim: rgba(34, 197, 94, 0.14);
+            --primary-glow: rgba(34, 197, 94, 0.4);
+            --accent: #14b8a6;
+            --text-main: #e6fffb;
+            --text-muted: #93c5c5;
+            --border: rgba(34, 197, 94, 0.2);
+            --success: #22c55e;
+        }
+        body.theme-slate {
+            --bg-deep: #0b1120;
+            --bg-panel: #111827;
+            --bg-chat: #0f172a;
+            --primary: #60a5fa;
+            --primary-dim: rgba(96, 165, 250, 0.14);
+            --primary-glow: rgba(96, 165, 250, 0.35);
+            --accent: #a78bfa;
+            --text-main: #f8fafc;
+            --text-muted: #9ca3af;
+            --border: rgba(148, 163, 184, 0.2);
+            --success: #22c55e;
+        }
+        body.layout-compact .sidebar { width: 260px; }
+        body.layout-compact .input-section { padding: 14px 16px; }
+        body.layout-compact .header { padding: 8px 16px; }
+        body.layout-compact .chat-container { padding: 18px var(--chat-padding-inline); }
+        body.layout-spacious .sidebar { width: 340px; }
+        body.layout-spacious .input-section { padding: 24px 28px; }
+        body.layout-spacious .header { padding: 0 36px; }
+        body.layout-spacious .chat-container { padding: 32px var(--chat-padding-inline); }
+        body.ui-glass .app-shell,
+        body.ui-glass .sidebar,
+        body.ui-glass .header,
+        body.ui-glass .input-section {
+            background: rgba(10, 10, 20, 0.6);
+            backdrop-filter: blur(18px);
+        }
 
         .app-shell {
             width: min(1400px, 100%);
             height: calc(100vh - 48px);
             display: flex;
-            background: rgba(2, 2, 8, 0.88);
+            background: var(--bg-panel);
             border: 1px solid rgba(255, 255, 255, 0.12);
             border-radius: 20px;
             box-shadow: 0 30px 60px rgba(0, 0, 0, 0.55);
@@ -190,6 +257,88 @@
             background: rgba(255, 255, 255, 0.06);
             border: 1px solid rgba(255, 255, 255, 0.12);
             color: var(--text-muted);
+        }
+        .menu-count {
+            margin-left: auto;
+            padding: 3px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 999px;
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.35);
+            color: var(--primary);
+        }
+        .menu-toggle {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        .menu-toggle input {
+            appearance: none;
+            width: 38px;
+            height: 22px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid var(--border);
+            position: relative;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .menu-toggle input::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #fff;
+            transition: 0.2s;
+        }
+        .menu-toggle input:checked {
+            background: var(--primary);
+        }
+        .menu-toggle input:checked::after {
+            transform: translateX(16px);
+        }
+        .saved-chats {
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .saved-chats-header {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--text-muted);
+        }
+        .saved-chats-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+        .saved-chat-item {
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-main);
+        }
+        .saved-chat-item small {
+            display: block;
+            margin-top: 4px;
+            color: var(--text-muted);
+            font-size: 11px;
         }
 
         /* temporary animated indicator inside menu item */
@@ -400,7 +549,7 @@
         
         .input-wrapper {
             width: 100%; max-width: 900px;
-            background: rgba(20,20,25,0.9); border: 1px solid var(--border);
+            background: var(--bg-chat); border: 1px solid var(--border);
             border-radius: 16px; padding: 10px;
             display: flex; align-items: flex-end; gap: 12px;
             box-shadow: var(--shadow-lg); transition: 0.3s;
@@ -410,23 +559,41 @@
             width: 44px; height: 44px; border-radius: 12px;
             border: 1px solid var(--border);
             background: rgba(255,255,255,0.04);
-            color: #fff; cursor: pointer;
+            color: var(--text-main); cursor: pointer;
             display: flex; align-items: center; justify-content: center;
             transition: 0.2s;
         }
         .upload-btn:hover { border-color: var(--primary); color: var(--primary); }
         .upload-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .voice-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.04);
+            color: var(--text-main);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+        .voice-btn.active {
+            border-color: rgba(59,130,246,0.6);
+            color: var(--primary);
+            box-shadow: 0 0 12px rgba(59,130,246,0.3);
+        }
         .input-wrapper:focus-within {
             border-color: var(--primary);
             box-shadow: 0 0 30px rgba(59, 130, 246, 0.15);
         }
 
         textarea {
-            flex: 1; background: transparent; border: none; color: #fff;
+            flex: 1; background: transparent; border: none; color: var(--text-main);
             font-size: 16px; padding: 12px; resize: none;
             max-height: 200px; height: 50px; font-family: var(--font-main);
         }
-        textarea::placeholder { color: #555; }
+        textarea::placeholder { color: var(--text-muted); }
 
         .send-btn {
             width: 50px; height: 50px; border-radius: 12px;
@@ -456,6 +623,8 @@
             border-radius: 16px;
             padding: 22px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            max-height: 85vh;
+            overflow-y: auto;
         }
         .modal-title { display: flex; align-items: center; justify-content: space-between; }
         .modal h3 { margin-bottom: 8px; }
@@ -508,6 +677,51 @@
         }
         .modal-actions .primary { background: var(--primary); color: #fff; }
         .modal-actions .secondary { background: rgba(255,255,255,0.06); color: #fff; border: 1px solid var(--border); }
+        .plan-card button {
+            margin-top: 14px;
+            width: 100%;
+            border: none;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.06);
+            color: #fff;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+        .plan-card button:hover {
+            border-color: rgba(59, 130, 246, 0.5);
+            color: var(--primary);
+        }
+        .payment-note {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+        .payment-actions {
+            display: grid;
+            gap: 10px;
+            margin-top: 16px;
+        }
+        .payment-actions button {
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.05);
+            color: var(--text-main);
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .payment-actions button.primary {
+            background: var(--primary);
+            color: #fff;
+            border-color: transparent;
+        }
+        .payment-actions button[disabled] {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
         .modal-link {
             margin-top: 12px;
             text-align: center;
@@ -634,13 +848,26 @@
         /* Mobile Responsive */
         @media (max-width: 850px) {
             body { padding: 0; }
-            .app-shell { width: 100%; height: 100vh; border-radius: 0; }
-            .sidebar { position: absolute; height: 100%; transform: translateX(-100%); }
+            .app-shell { width: 100%; height: 100vh; border-radius: 0; border: none; }
+            .sidebar { position: fixed; height: 100%; transform: translateX(-100%); }
             .sidebar.active { transform: translateX(0); }
+            .main-wrapper { width: 100%; }
             :root { --chat-padding-inline: 5%; }
             .chat-container { padding: 20px var(--chat-padding-inline); }
             .input-section { padding: 20px 10px; }
-            .header { padding: 0 20px; }
+            .header {
+                padding: 12px 16px;
+                height: auto;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            .header-title { font-size: 16px; }
+            .status-badge {
+                padding: 4px 8px;
+                font-size: 11px;
+            }
+            .user-menu-btn span { display: none; }
+            .auth-pill span { display: none; }
             .mobile-menu-btn { display: block !important; }
             .mascot { left: calc(var(--chat-padding-inline) + 4px); bottom: 110px; } /* avoid input area on small screens */
             .mobile-back-btn { display: flex; }
@@ -672,7 +899,7 @@
         
         <div class="brand-section">
             <div class="brand-name">RUHVAAN AI</div>
-            <div style="font-size:12px; color:#666; margin-top:5px;">Advanced Neural Core</div>
+            <div style="font-size:12px; color:#666; margin-top:5px;">Smart Study Companion</div>
         </div>
 
         <button class="action-btn" id="newChatBtn" onclick="animateAction(this); resetChat()">
@@ -683,9 +910,9 @@
             <div class="menu-item active">
                 <i class="fas fa-comment-alt"></i> Chat Interface
             </div>
-            <div class="menu-item" onclick="triggerModuleAnim(this, 'Generate Images')">
+            <div class="menu-item" onclick="showImageModal()">
                 <i class="fas fa-image"></i> Generate Images
-                <span class="coming-soon">Coming Soon</span>
+                <span class="coming-soon">Beta</span>
             </div>
             <div class="menu-item" onclick="triggerModuleAnim(this, 'Voice Mode')">
                 <i class="fas fa-microphone"></i> Voice Mode
@@ -694,9 +921,36 @@
             <div class="menu-item" onclick="showPlansModal()">
                 <i class="fas fa-tags"></i> Plans & Pricing
             </div>
+            <div class="menu-item">
+                <i class="fas fa-palette"></i> Theme
+                <span class="menu-toggle">
+                    <span>Light</span>
+                    <input type="checkbox" id="themeToggle" aria-label="Toggle light theme" />
+                </span>
+            </div>
+            <div class="menu-item" onclick="showThemeModal()">
+                <i class="fas fa-wand-magic-sparkles"></i> UI Styles
+                <span class="coming-soon">New</span>
+            </div>
+            <div class="menu-item">
+                <i class="fas fa-save"></i> Save Chats
+                <span class="menu-toggle">
+                    <span>On</span>
+                    <input type="checkbox" id="saveChatToggle" aria-label="Toggle chat saving" />
+                </span>
+            </div>
             <div class="menu-item" onclick="clearStorage()">
                 <i class="fas fa-trash"></i> Clear Memory
             </div>
+        </div>
+
+        <div class="saved-chats">
+            <div class="saved-chats-header">Saved Chats</div>
+            <div class="saved-chats-list" id="savedChatsList"></div>
+        </div>
+        <div class="saved-chats">
+            <div class="saved-chats-header">Shared PDFs</div>
+            <div class="saved-chats-list" id="sharedPdfList"></div>
         </div>
 
         <div class="tg-card">
@@ -714,7 +968,7 @@
                 <div class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('active')">
                     <i class="fas fa-bars"></i>
                 </div>
-                <div class="header-title">Ruhvaan Core v1.0</div>
+                <div class="header-title">Ruhvaan AI</div>
             </div>
             <div style="display:flex; align-items:center; gap:10px;">
                 <div class="status-badge">
@@ -766,6 +1020,9 @@
 
         <div class="input-section">
             <div class="input-wrapper">
+                <button id="voiceBtn" class="voice-btn" title="Voice Input">
+                    <i class="fas fa-microphone"></i>
+                </button>
                 <button id="pdfBtn" class="upload-btn" title="Upload PDF (Coming Soon)">
                     <i class="fas fa-file-pdf"></i>
                 </button>
@@ -893,6 +1150,112 @@
                 <button class="secondary" id="profileSaveBtn">Save</button>
                 <button class="primary" id="profileResetBtn">Reset Password</button>
             </div>
+            <div style="margin-top:12px; font-size:13px; color:var(--text-muted);">
+                Plan: <strong style="color:#fff;">Free User</strong>
+            </div>
+            <div class="profile-actions" style="margin-top:8px;">
+                <button class="primary" onclick="showPlansModal()">Upgrade to Premium</button>
+            </div>
+            <div style="margin-top:16px;">
+                <h4 style="margin-bottom:6px;">Registered Users (local)</h4>
+                <div id="registeredUsersList" style="font-size:13px; color:var(--text-muted);"></div>
+            </div>
+            <div style="margin-top:16px;">
+                <h4 style="margin-bottom:6px;">Admin Insights</h4>
+                <input type="password" id="adminTokenInput" placeholder="Admin token" />
+                <div class="profile-actions">
+                    <button class="secondary" id="adminStatsBtn">Load Admin Stats</button>
+                </div>
+                <div style="margin-top:10px;">
+                    <input type="file" id="sharedPdfInput" accept="application/pdf" />
+                    <div class="profile-actions" style="margin-top:8px;">
+                        <button class="secondary" id="sharedPdfUploadBtn">Upload Shared PDF</button>
+                    </div>
+                </div>
+                <div id="adminStatsSummary" style="font-size:13px; color:var(--text-muted); margin-top:8px;"></div>
+                <div id="adminUsersList" style="font-size:13px; color:var(--text-muted); margin-top:8px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="imageModal">
+        <div class="modal">
+            <div class="modal-title">
+                <h3>Generate Image</h3>
+                <button class="modal-close" id="closeImageIcon" aria-label="Close image generator">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <p>Describe the image you want. We'll create a preview as soon as image generation is enabled.</p>
+            <input type="text" id="imagePrompt" placeholder="e.g. Futuristic city at sunset" />
+            <div class="modal-actions">
+                <button class="secondary" onclick="hideImageModal()">Cancel</button>
+                <button class="primary" id="imageGenerateBtn">Generate</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="themeModal">
+        <div class="modal">
+            <div class="modal-title">
+                <h3>Choose Your UI</h3>
+                <button class="modal-close" id="closeThemeIcon" aria-label="Close UI styles">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <p>Pick a UI style that matches your vibe.</p>
+            <div class="feature-stack" style="margin-top:12px;">
+                <div class="feature-group">
+                    <ul class="feature-list">
+                        <li><button class="secondary" style="width:100%;" onclick="setTheme('dark')">Midnight (Default)</button></li>
+                        <li><button class="secondary" style="width:100%;" onclick="setTheme('light')">Snowlight</button></li>
+                        <li><button class="secondary" style="width:100%;" onclick="setTheme('synth')">Synthwave</button></li>
+                        <li><button class="secondary" style="width:100%;" onclick="setTheme('emerald')">Emerald</button></li>
+                        <li><button class="secondary" style="width:100%;" onclick="setTheme('slate')">Slate</button></li>
+                    </ul>
+                </div>
+                <div class="feature-group">
+                    <h4>Layout Density</h4>
+                    <ul class="feature-list">
+                        <li><button class="secondary" style="width:100%;" onclick="setLayout('compact')">Compact</button></li>
+                        <li><button class="secondary" style="width:100%;" onclick="setLayout('comfortable')">Comfortable</button></li>
+                        <li><button class="secondary" style="width:100%;" onclick="setLayout('spacious')">Spacious</button></li>
+                    </ul>
+                </div>
+                <div class="feature-group">
+                    <h4>Style Effects</h4>
+                    <ul class="feature-list">
+                        <li><button class="secondary" style="width:100%;" onclick="setGlass(true)">Glass Mode On</button></li>
+                        <li><button class="secondary" style="width:100%;" onclick="setGlass(false)">Glass Mode Off</button></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="secondary" onclick="hideThemeModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="paymentModal">
+        <div class="modal">
+            <div class="modal-title">
+                <h3>Unlock Premium</h3>
+                <button class="modal-close" id="closePaymentIcon" aria-label="Close payment">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <p id="paymentPlanInfo">Plan selected.</p>
+            <div class="payment-actions">
+                <button class="primary" id="payRazorpayBtn" disabled>Pay with Razorpay (Coming Soon)</button>
+                <button id="payStripeBtn" disabled>Pay with Stripe (Coming Soon)</button>
+            </div>
+            <div class="modal-actions">
+                <button class="primary" id="subscribeBtn">Subscribe</button>
+            </div>
+            <div class="payment-note">Payment gateway integration will activate once backend billing is live.</div>
+            <div class="modal-actions">
+                <button class="secondary" onclick="hidePaymentModal()">Close</button>
+            </div>
         </div>
     </div>
 
@@ -911,27 +1274,43 @@
                 <div class="plan-card">
                     <h4>Minor</h4>
                     <div class="plan-price">₹0</div>
-                    <div class="plan-benefits">Basic chat, 3 guest questions, community support.</div>
+                    <div class="plan-benefits">Starter chat, 3 guest questions/day, community support.</div>
+                    <button class="plan-select" data-plan="Minor" data-price="₹0">Current Plan</button>
                 </div>
                 <div class="plan-card">
                     <h4>Major</h4>
                     <div class="plan-price">₹199/mo</div>
-                    <div class="plan-benefits">Unlimited chat, PDF Q&A, faster responses.</div>
+                    <div class="plan-benefits">Unlimited chat, PDF Q&A, priority responses.</div>
+                    <button class="plan-select" data-plan="Major" data-price="₹199/mo">Choose Major</button>
                 </div>
                 <div class="plan-card">
                     <h4>Pro</h4>
                     <div class="plan-price">₹499/mo</div>
-                    <div class="plan-benefits">Priority queue, advanced reasoning, analytics.</div>
+                    <div class="plan-benefits">Advanced reasoning, analytics, faster model access.</div>
+                    <button class="plan-select" data-plan="Pro" data-price="₹499/mo">Choose Pro</button>
                 </div>
                 <div class="plan-card">
                     <h4>Plus</h4>
                     <div class="plan-price">₹799/mo</div>
                     <div class="plan-benefits">Team sharing, extended memory, premium models.</div>
+                    <button class="plan-select" data-plan="Plus" data-price="₹799/mo">Choose Plus</button>
                 </div>
                 <div class="plan-card">
                     <h4>Advance</h4>
                     <div class="plan-price">₹1299/mo</div>
                     <div class="plan-benefits">Dedicated support, custom tools, SLA access.</div>
+                    <button class="plan-select" data-plan="Advance" data-price="₹1299/mo">Choose Advance</button>
+                </div>
+            </div>
+            <div class="feature-stack" style="margin-top:18px;">
+                <div class="feature-group">
+                    <h4>What you get</h4>
+                    <ul class="feature-list">
+                        <li>Premium AI stack: smarter reasoning + faster answers.</li>
+                        <li>Unique reply style: crisp, calm, and solution-focused.</li>
+                        <li>Premium models, longer memory, and priority queue.</li>
+                        <li>PDF Q&A with save + download options.</li>
+                    </ul>
                 </div>
             </div>
             <div class="feature-stack">
@@ -998,13 +1377,24 @@
         const pdfInput = document.getElementById('pdfInput');
         const authPill = document.getElementById('authPill');
         const authPillText = document.getElementById('authPillText');
+        const themeToggle = document.getElementById('themeToggle');
+        const saveChatToggle = document.getElementById('saveChatToggle');
+        const savedChatsList = document.getElementById('savedChatsList');
+        const sharedPdfList = document.getElementById('sharedPdfList');
+        const voiceBtn = document.getElementById('voiceBtn');
         const loginModal = document.getElementById('loginModal');
         const signupModal = document.getElementById('signupModal');
+        const imageModal = document.getElementById('imageModal');
+        const themeModal = document.getElementById('themeModal');
         const plansModal = document.getElementById('plansModal');
+        const paymentModal = document.getElementById('paymentModal');
         const forgotModal = document.getElementById('forgotModal');
         const profileModal = document.getElementById('profileModal');
         const closePlansIcon = document.getElementById('closePlansIcon');
+        const closeImageIcon = document.getElementById('closeImageIcon');
+        const closePaymentIcon = document.getElementById('closePaymentIcon');
         const closeProfileIcon = document.getElementById('closeProfileIcon');
+        const closeThemeIcon = document.getElementById('closeThemeIcon');
         const loginEmail = document.getElementById('loginEmail');
         const loginPassword = document.getElementById('loginPassword');
         const loginBtn = document.getElementById('loginBtn');
@@ -1034,6 +1424,13 @@
         const profileAvatarInput = document.getElementById('profileAvatarInput');
         const profileSaveBtn = document.getElementById('profileSaveBtn');
         const profileResetBtn = document.getElementById('profileResetBtn');
+        const registeredUsersList = document.getElementById('registeredUsersList');
+        const adminTokenInput = document.getElementById('adminTokenInput');
+        const adminStatsBtn = document.getElementById('adminStatsBtn');
+        const adminStatsSummary = document.getElementById('adminStatsSummary');
+        const adminUsersList = document.getElementById('adminUsersList');
+        const sharedPdfInput = document.getElementById('sharedPdfInput');
+        const sharedPdfUploadBtn = document.getElementById('sharedPdfUploadBtn');
         const closeSignup = document.getElementById('closeSignup');
         const closeSignupIcon = document.getElementById('closeSignupIcon');
         const signupError = document.getElementById('signupError');
@@ -1049,16 +1446,28 @@
         const menuSettings = document.getElementById('menuSettings');
         const menuHelp = document.getElementById('menuHelp');
         const menuLogout = document.getElementById('menuLogout');
+        const imagePrompt = document.getElementById('imagePrompt');
+        const imageGenerateBtn = document.getElementById('imageGenerateBtn');
+        const paymentPlanInfo = document.getElementById('paymentPlanInfo');
+        const planSelectButtons = document.querySelectorAll('.plan-select');
+        const subscribeBtn = document.getElementById('subscribeBtn');
 
         // State
         let isGenerating = false;
         let shouldOfferPdfDownload = false;
+        let speechRecognizer = null;
+        let isListening = false;
 
         // Initialize
         window.onload = () => {
             loadHistory();
             refreshAuthUI();
             loadProfile();
+            loadTheme();
+            renderRegisteredUsers();
+            loadSaveChatSetting();
+            renderSavedChats();
+            loadSharedPdfs();
         };
 
         // --- CORE FUNCTIONS ---
@@ -1099,6 +1508,10 @@
                     body: JSON.stringify({ message: text })
                 });
 
+                if (response.status === 401) {
+                    showLoginModal("Please login to continue.");
+                    throw new Error("Unauthorized");
+                }
                 if (!response.ok) throw new Error("Server Error");
 
                 const data = await response.json();
@@ -1120,41 +1533,53 @@
             }
         }
 
-        // 2. Add Message to UI
-        function addMessageToUI(text, sender) {
-            const div = document.createElement('div');
-            div.className = `msg-row ${sender}`;
-            const messageIndex = sender === 'user'
-                ? `Q${document.querySelectorAll('.msg-row.user').length + 1}: `
-                : '';
-            
-            // Markdown Parsing (Basic)
+        function formatMessageText(text) {
             let formattedText = text
+                .replace(/&/g, "&amp;")
                 .replace(/</g, "&lt;")
                 .replace(/>/g, "&gt;")
                 .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
                 .replace(/`([^`]+)`/g, '<code style="background:#222; padding:2px 5px; border-radius:4px; color:#ff79c6">$1</code>');
 
-            // Code Block Detection
             if (formattedText.includes('```')) {
-                formattedText = formattedText.replace(/```(\w+)?\n([\s\S]*?)```/g, 
-                    '<pre><code class="language-$1">$2</code></pre>');
+                formattedText = formattedText.replace(
+                    /```(\w+)?\n([\s\S]*?)```/g,
+                    '<pre><code class="language-$1">$2</code></pre>'
+                );
             } else {
                 formattedText = formattedText.replace(/\n/g, '<br>');
             }
+            formattedText = formattedText.replace(
+                /(https?:\/\/[^\s<]+)/g,
+                '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
+            );
+            return formattedText;
+        }
+
+        // 2. Add Message to UI
+        function addMessageToUI(text, sender) {
+            const div = document.createElement('div');
+            div.className = `msg-row ${sender}`;
+            // Markdown Parsing (Basic)
+            const formattedText = formatMessageText(text);
 
             const shouldShowDownload = sender === 'bot' && shouldOfferPdfDownload;
             const downloadButton = shouldShowDownload
-                ? `<button class="upload-btn" style="margin-top:10px;" onclick="downloadPdf(${JSON.stringify(text)})">
-                        <i class="fas fa-file-pdf"></i> Download PDF
-                   </button>`
+                ? `<div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="upload-btn" onclick="downloadPdf(${JSON.stringify(text)})">
+                            <i class="fas fa-file-pdf"></i> Download PDF
+                        </button>
+                        <button class="upload-btn" onclick="savePdfNote(${JSON.stringify(text)})">
+                            <i class="fas fa-bookmark"></i> Save
+                        </button>
+                   </div>`
                 : '';
             div.innerHTML = `
                 <div class="avatar">
                     ${sender === 'bot' ? '<i class="fas fa-cube"></i>' : '<i class="fas fa-user"></i>'}
                 </div>
                 <div class="bubble">
-                    ${messageIndex}${formattedText}
+                    ${formattedText}
                     ${downloadButton}
                 </div>
             `;
@@ -1203,7 +1628,7 @@
                         setTimeout(type, speed);
                     } else {
                         // After typing, replace textContent with HTML to render Markdown
-                        bubble.innerHTML = text.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+                        bubble.innerHTML = formatMessageText(text);
                         resolve();
                     }
                 }
@@ -1250,27 +1675,55 @@
 
         // --- MEMORY MANAGEMENT (Local Storage) ---
         function saveToHistory(text, sender) {
-            const history = JSON.parse(localStorage.getItem('ruhvaan_chat') || '[]');
-            history.push({ text, sender });
-            localStorage.setItem('ruhvaan_chat', JSON.stringify(history));
+            if (!isSaveChatEnabled()) return;
+            const sessions = getChatSessions();
+            const active = ensureActiveSession();
+            if (!active) return;
+            active.messages.push({ text, sender, ts: Date.now() });
+            if (sender === 'user') {
+                updateSessionTitleIfNeeded(active, text);
+            }
+            const updatedSessions = sessions.map((session) =>
+                session.id === active.id ? active : session
+            );
+            saveChatSessions(updatedSessions);
+            renderSavedChats();
         }
 
         function loadHistory() {
-            const history = JSON.parse(localStorage.getItem('ruhvaan_chat') || '[]');
-            if(history.length === 0) {
-                // Default Welcome Message
-                addMessageToUI("**Hello! Main Ruhvaan hoon.**\nSystem online and ready. Main aapki kya madad karoon?", 'bot');
-            } else {
-                history.forEach(msg => addMessageToUI(msg.text, msg.sender));
+            if (!isSaveChatEnabled()) {
+                addMessageToUI("**Hello! Main Ruhvaan hoon.**\nJEE/NEET/College ki doubts? Main help karunga. Aapko kya chahiye?", 'bot');
+                return;
             }
+            const sessions = getChatSessions();
+            if (sessions.length === 0) {
+                ensureActiveSession();
+                addMessageToUI("**Hello! Main Ruhvaan hoon.**\nJEE/NEET/College ki doubts? Main help karunga. Aapko kya chahiye?", 'bot');
+                return;
+            }
+            const activeId = getActiveSessionId() || sessions[0].id;
+            const active = sessions.find((session) => session.id === activeId) || sessions[0];
+            setActiveSessionId(active.id);
+            active.messages.forEach((msg) => addMessageToUI(msg.text, msg.sender));
         }
 
         function resetChat() {
             if(confirm("Start new chat? Purani chat delete ho jayegi.")) {
-                localStorage.removeItem('ruhvaan_chat');
                 chatContainer.innerHTML = '';
-                // re-insert mascot so it remains visible after clearing
                 chatContainer.appendChild(mascot);
+                if (isSaveChatEnabled()) {
+                    const sessions = getChatSessions();
+                    const newSession = {
+                        id: String(Date.now()),
+                        title: 'New Chat',
+                        messages: [],
+                        created_at: Date.now(),
+                    };
+                    sessions.unshift(newSession);
+                    saveChatSessions(sessions);
+                    setActiveSessionId(newSession.id);
+                    renderSavedChats();
+                }
                 addMessageToUI("Chat reset successful. Starting fresh!", 'bot');
             }
         }
@@ -1279,6 +1732,294 @@
             localStorage.clear();
             alert("Memory Cleared!");
             location.reload();
+        }
+
+        function loadTheme() {
+            const storedTheme = localStorage.getItem('ruhvaan_theme') || 'dark';
+            setTheme(storedTheme);
+            if (themeToggle) {
+                themeToggle.checked = storedTheme === 'light';
+            }
+            const storedLayout = localStorage.getItem('ruhvaan_layout') || 'comfortable';
+            setLayout(storedLayout);
+            const glassEnabled = localStorage.getItem('ruhvaan_glass') === 'on';
+            setGlass(glassEnabled);
+        }
+
+        function applyTheme(theme) {
+            document.body.classList.remove('theme-light', 'theme-synth', 'theme-emerald', 'theme-slate');
+            if (theme === 'light') document.body.classList.add('theme-light');
+            if (theme === 'synth') document.body.classList.add('theme-synth');
+            if (theme === 'emerald') document.body.classList.add('theme-emerald');
+            if (theme === 'slate') document.body.classList.add('theme-slate');
+        }
+
+        function setTheme(theme) {
+            applyTheme(theme);
+            localStorage.setItem('ruhvaan_theme', theme);
+            if (themeToggle) {
+                themeToggle.checked = theme === 'light';
+            }
+        }
+
+        function setLayout(layout) {
+            document.body.classList.remove('layout-compact', 'layout-spacious');
+            if (layout === 'compact') document.body.classList.add('layout-compact');
+            if (layout === 'spacious') document.body.classList.add('layout-spacious');
+            localStorage.setItem('ruhvaan_layout', layout);
+        }
+
+        function setGlass(enabled) {
+            if (enabled) {
+                document.body.classList.add('ui-glass');
+            } else {
+                document.body.classList.remove('ui-glass');
+            }
+            localStorage.setItem('ruhvaan_glass', enabled ? 'on' : 'off');
+        }
+
+        function loadSaveChatSetting() {
+            const enabled = isSaveChatEnabled();
+            if (saveChatToggle) {
+                saveChatToggle.checked = enabled;
+            }
+        }
+
+        function getRegisteredUsers() {
+            return JSON.parse(localStorage.getItem('ruhvaan_registered_users') || '[]');
+        }
+
+        function recordRegistration(email) {
+            if (!email) return;
+            const users = getRegisteredUsers();
+            if (!users.find((user) => user.email === email)) {
+                users.unshift({ email, time: new Date().toISOString() });
+                localStorage.setItem('ruhvaan_registered_users', JSON.stringify(users.slice(0, 20)));
+            }
+            renderRegisteredUsers();
+        }
+
+        function renderRegisteredUsers() {
+            if (!registeredUsersList) return;
+            const users = getRegisteredUsers();
+            if (users.length === 0) {
+                registeredUsersList.textContent = "No registrations yet.";
+                return;
+            }
+            registeredUsersList.innerHTML = users
+                .map((user) => `<div>• ${user.email}</div>`)
+                .join('');
+        }
+
+        async function loadAdminStats() {
+            const token = adminTokenInput?.value?.trim() || localStorage.getItem('ruhvaan_admin_token') || '';
+            if (!token) {
+                if (adminStatsSummary) adminStatsSummary.textContent = "Admin token required.";
+                return;
+            }
+            localStorage.setItem('ruhvaan_admin_token', token);
+            if (adminStatsSummary) adminStatsSummary.textContent = "Loading admin stats...";
+            try {
+                const [statsRes, usersRes] = await Promise.all([
+                    fetch(`${API_URL}/admin/stats`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    }),
+                    fetch(`${API_URL}/admin/users`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    }),
+                ]);
+                if (!statsRes.ok) throw new Error("Unauthorized or server error.");
+                const stats = await statsRes.json();
+                if (adminStatsSummary) {
+                    adminStatsSummary.textContent = `Total users: ${stats.total_users} • Active (24h): ${stats.active_last_24h} • Active (7d): ${stats.active_last_7d}`;
+                }
+                if (usersRes.ok) {
+                    const users = await usersRes.json();
+                    if (adminUsersList) {
+                        const items = users.items || [];
+                        adminUsersList.innerHTML = items.length
+                            ? items.map((user) => `<div>• ${user.email}</div>`).join('')
+                            : 'No users found.';
+                    }
+                }
+            } catch (error) {
+                if (adminStatsSummary) adminStatsSummary.textContent = "Failed to load admin stats.";
+            }
+        }
+
+        async function uploadSharedPdf() {
+            const token = adminTokenInput?.value?.trim() || localStorage.getItem('ruhvaan_admin_token') || '';
+            const file = sharedPdfInput?.files?.[0];
+            if (!token) {
+                showTinyToast("Admin token required.");
+                return;
+            }
+            if (!file) {
+                showTinyToast("Select a PDF first.");
+                return;
+            }
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                const response = await fetch(`${API_URL}/admin/shared-pdf`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}` },
+                    body: formData
+                });
+                if (!response.ok) throw new Error('Upload failed');
+                showTinyToast("Shared PDF uploaded.");
+                sharedPdfInput.value = '';
+                loadSharedPdfs();
+            } catch (error) {
+                showTinyToast("Upload failed.");
+            }
+        }
+
+        function isSaveChatEnabled() {
+            return localStorage.getItem('ruhvaan_save_chat') !== 'off';
+        }
+
+        function setSaveChatEnabled(enabled) {
+            localStorage.setItem('ruhvaan_save_chat', enabled ? 'on' : 'off');
+        }
+
+        function getChatSessions() {
+            return JSON.parse(localStorage.getItem('ruhvaan_chat_sessions') || '[]');
+        }
+
+        function saveChatSessions(sessions) {
+            localStorage.setItem('ruhvaan_chat_sessions', JSON.stringify(sessions));
+        }
+
+        function getActiveSessionId() {
+            return localStorage.getItem('ruhvaan_active_session') || '';
+        }
+
+        function setActiveSessionId(sessionId) {
+            localStorage.setItem('ruhvaan_active_session', sessionId);
+        }
+
+        function ensureActiveSession() {
+            if (!isSaveChatEnabled()) return null;
+            const sessions = getChatSessions();
+            let activeId = getActiveSessionId();
+            let activeSession = sessions.find((session) => session.id === activeId);
+            if (!activeSession) {
+                activeSession = {
+                    id: String(Date.now()),
+                    title: 'New Chat',
+                    messages: [],
+                    created_at: Date.now(),
+                };
+                sessions.unshift(activeSession);
+                setActiveSessionId(activeSession.id);
+                saveChatSessions(sessions);
+            }
+            renderSavedChats();
+            return activeSession;
+        }
+
+        function renderSavedChats() {
+            if (!savedChatsList) return;
+            const sessions = getChatSessions();
+            if (!isSaveChatEnabled()) {
+                savedChatsList.innerHTML = '<div style="color:var(--text-muted); font-size:12px;">Chat saving is off.</div>';
+                return;
+            }
+            if (sessions.length === 0) {
+                savedChatsList.innerHTML = '<div style="color:var(--text-muted); font-size:12px;">No saved chats yet.</div>';
+                return;
+            }
+            savedChatsList.innerHTML = sessions
+                .map((session) => {
+                    const time = new Date(session.created_at || Date.now()).toLocaleString();
+                    return `
+                        <div class="saved-chat-item" data-session-id="${session.id}">
+                            ${session.title || 'New Chat'}
+                            <small>${session.messages?.length || 0} messages • ${time}</small>
+                        </div>
+                    `;
+                })
+                .join('');
+        }
+
+        async function loadSharedPdfs() {
+            if (!sharedPdfList) return;
+            sharedPdfList.innerHTML = '<div style="color:var(--text-muted); font-size:12px;">Loading PDFs...</div>';
+            try {
+                const headers = {};
+                const token = getAuthToken();
+                if (token) headers.Authorization = `Bearer ${token}`;
+                const response = await fetch(`${API_URL}/shared-pdfs`, { headers });
+                if (response.status === 401) {
+                    sharedPdfList.innerHTML = '<div style="color:var(--text-muted); font-size:12px;">Login required to view shared PDFs.</div>';
+                    return;
+                }
+                if (!response.ok) throw new Error('Failed to load');
+                const data = await response.json();
+                if (!data.items?.length) {
+                    sharedPdfList.innerHTML = '<div style="color:var(--text-muted); font-size:12px;">No shared PDFs yet.</div>';
+                    return;
+                }
+                sharedPdfList.innerHTML = data.items
+                    .map((item) => `
+                        <div class="saved-chat-item">
+                            ${item.filename}
+                            <small>${new Date(item.created_at * 1000).toLocaleString()}</small>
+                            <button class="upload-btn" style="margin-top:6px;" onclick="downloadSharedPdf(${item.id}, ${JSON.stringify(item.filename)})">
+                                <i class="fas fa-download"></i> Download
+                            </button>
+                        </div>
+                    `)
+                    .join('');
+            } catch (error) {
+                sharedPdfList.innerHTML = '<div style="color:var(--text-muted); font-size:12px;">Unable to load PDFs.</div>';
+            }
+        }
+
+        async function downloadSharedPdf(pdfId, filename) {
+            try {
+                const headers = {};
+                const token = getAuthToken();
+                if (token) headers.Authorization = `Bearer ${token}`;
+                const response = await fetch(`${API_URL}/shared-pdfs/${pdfId}/download`, { headers });
+                if (!response.ok) throw new Error('Download failed');
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename || `shared-${pdfId}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                showTinyToast("Download failed. Please login.");
+            }
+        }
+
+        function loadChatSession(sessionId) {
+            const sessions = getChatSessions();
+            const session = sessions.find((item) => item.id === sessionId);
+            if (!session) return;
+            setActiveSessionId(sessionId);
+            chatContainer.innerHTML = '';
+            chatContainer.appendChild(mascot);
+            session.messages.forEach((message) => addMessageToUI(message.text, message.sender));
+            renderSavedChats();
+        }
+
+        function updateSessionTitleIfNeeded(session, text) {
+            if (session.title && session.title !== 'New Chat') return;
+            if (!text) return;
+            session.title = text.length > 28 ? `${text.slice(0, 28)}...` : text;
+        }
+
+        function savePdfNote(text) {
+            const items = JSON.parse(localStorage.getItem('ruhvaan_saved_pdfs') || '[]');
+            items.unshift({ text, saved_at: Date.now() });
+            localStorage.setItem('ruhvaan_saved_pdfs', JSON.stringify(items.slice(0, 20)));
+            showTinyToast("PDF saved.");
         }
 
         function getGuestCount() {
@@ -1318,7 +2059,7 @@
             const email = localStorage.getItem('ruhvaan_email');
             if (email) {
                 authPillText.innerHTML = `<strong>${email}</strong>`;
-                authPill.title = "Click to logout";
+                authPill.title = "Click to open profile";
             } else {
                 authPillText.textContent = "Guest";
                 authPill.title = "Click to login";
@@ -1336,6 +2077,8 @@
             signupModal.classList.remove('active');
             forgotModal.classList.remove('active');
             profileModal.classList.remove('active');
+            imageModal.classList.remove('active');
+            paymentModal.classList.remove('active');
         }
 
         function hideLoginModal() {
@@ -1354,6 +2097,8 @@
             loginModal.classList.remove('active');
             forgotModal.classList.remove('active');
             profileModal.classList.remove('active');
+            imageModal.classList.remove('active');
+            paymentModal.classList.remove('active');
         }
 
         function hideSignupModal() {
@@ -1371,6 +2116,8 @@
             forgotModal.classList.add('active');
             signupModal.classList.remove('active');
             loginModal.classList.remove('active');
+            imageModal.classList.remove('active');
+            paymentModal.classList.remove('active');
         }
 
         function hideForgotModal() {
@@ -1396,6 +2143,10 @@
             const avatar = localStorage.getItem('ruhvaan_profile_avatar') || 'https://i.imgur.com/8Km9tLL.png';
             profileAvatar.src = avatar;
             userMenuAvatar.src = avatar;
+            renderRegisteredUsers();
+            if (adminTokenInput) {
+                adminTokenInput.value = localStorage.getItem('ruhvaan_admin_token') || '';
+            }
         }
 
         function saveProfile() {
@@ -1437,6 +2188,35 @@
 
         function hidePlansModal() {
             plansModal.classList.remove('active');
+        }
+
+        function showImageModal() {
+            imageModal.classList.add('active');
+        }
+
+        function hideImageModal() {
+            imageModal.classList.remove('active');
+        }
+
+        function showThemeModal() {
+            themeModal.classList.add('active');
+        }
+
+        function hideThemeModal() {
+            themeModal.classList.remove('active');
+        }
+
+        function showPaymentModal(planName = 'Premium', priceLabel = '') {
+            if (paymentPlanInfo) {
+                paymentPlanInfo.textContent = priceLabel
+                    ? `${planName} selected • ${priceLabel}`
+                    : `${planName} selected`;
+            }
+            paymentModal.classList.add('active');
+        }
+
+        function hidePaymentModal() {
+            paymentModal.classList.remove('active');
         }
 
         // --- NEW: Non-blocking module animation (replaces alert popups) ---
@@ -1493,6 +2273,48 @@
             setTimeout(()=> { toast.remove(); }, 1500);
         }
 
+        function setupVoiceInput() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                return null;
+            }
+            const recognizer = new SpeechRecognition();
+            recognizer.lang = 'en-IN';
+            recognizer.continuous = false;
+            recognizer.interimResults = false;
+            recognizer.onresult = (event) => {
+                const transcript = event.results?.[0]?.[0]?.transcript || '';
+                if (transcript) {
+                    userInput.value = transcript;
+                    resizeTextarea();
+                }
+            };
+            recognizer.onend = () => {
+                isListening = false;
+                if (voiceBtn) voiceBtn.classList.remove('active');
+            };
+            return recognizer;
+        }
+
+        function toggleVoiceInput() {
+            if (!speechRecognizer) {
+                speechRecognizer = setupVoiceInput();
+            }
+            if (!speechRecognizer) {
+                showTinyToast("Voice input not supported on this device.");
+                return;
+            }
+            if (isListening) {
+                speechRecognizer.stop();
+                isListening = false;
+                voiceBtn?.classList.remove('active');
+                return;
+            }
+            isListening = true;
+            voiceBtn?.classList.add('active');
+            speechRecognizer.start();
+        }
+
         // --- Mascot interactions ---
         // mascot bounces and shows small tooltip when clicked
         if (mascot) {
@@ -1518,6 +2340,10 @@
         sendBtn.addEventListener('click', handleSend);
 
         userInput.addEventListener('input', resizeTextarea);
+
+        if (voiceBtn) {
+            voiceBtn.addEventListener('click', toggleVoiceInput);
+        }
 
         if (pdfBtn && pdfInput) {
             pdfBtn.addEventListener('click', () => pdfInput.click());
@@ -1553,11 +2379,38 @@
             });
         }
 
+        if (themeToggle) {
+            themeToggle.addEventListener('change', () => {
+                applyTheme(themeToggle.checked ? 'light' : 'dark');
+            });
+        }
+        if (saveChatToggle) {
+            saveChatToggle.addEventListener('change', () => {
+                setSaveChatEnabled(saveChatToggle.checked);
+                renderSavedChats();
+                if (!saveChatToggle.checked) {
+                    showTinyToast("Chat saving disabled.");
+                } else {
+                    ensureActiveSession();
+                    showTinyToast("Chat saving enabled.");
+                }
+            });
+        }
+        if (savedChatsList) {
+            savedChatsList.addEventListener('click', (event) => {
+                const target = event.target.closest('.saved-chat-item');
+                if (!target) return;
+                const sessionId = target.getAttribute('data-session-id');
+                if (sessionId) {
+                    loadChatSession(sessionId);
+                }
+            });
+        }
+
         if (authPill) {
             authPill.addEventListener('click', () => {
                 if (isLoggedIn()) {
-                    clearAuth();
-                    showTinyToast("Logged out");
+                    showProfileModal();
                 } else {
                     showLoginModal();
                 }
@@ -1584,6 +2437,15 @@
         }
         if (closePlansIcon) {
             closePlansIcon.addEventListener('click', hidePlansModal);
+        }
+        if (closeImageIcon) {
+            closeImageIcon.addEventListener('click', hideImageModal);
+        }
+        if (closeThemeIcon) {
+            closeThemeIcon.addEventListener('click', hideThemeModal);
+        }
+        if (closePaymentIcon) {
+            closePaymentIcon.addEventListener('click', hidePaymentModal);
         }
         if (openSignup) {
             openSignup.addEventListener('click', () => showSignupModal());
@@ -1620,6 +2482,42 @@
                     }
                 };
                 reader.readAsDataURL(file);
+            });
+        }
+        if (adminStatsBtn) {
+            adminStatsBtn.addEventListener('click', () => {
+                loadAdminStats();
+            });
+        }
+        if (sharedPdfUploadBtn) {
+            sharedPdfUploadBtn.addEventListener('click', () => {
+                uploadSharedPdf();
+            });
+        }
+        if (planSelectButtons.length) {
+            planSelectButtons.forEach((button) => {
+                button.addEventListener('click', () => {
+                    const planName = button.dataset.plan || 'Premium';
+                    const price = button.dataset.price || '';
+                    showPaymentModal(planName, price);
+                });
+            });
+        }
+        if (subscribeBtn) {
+            subscribeBtn.addEventListener('click', () => {
+                showTinyToast("Subscription flow will be enabled after payments setup.");
+            });
+        }
+        if (imageGenerateBtn) {
+            imageGenerateBtn.addEventListener('click', () => {
+                const prompt = imagePrompt?.value?.trim() || '';
+                if (!prompt) {
+                    showTinyToast("Add an image prompt first.");
+                    return;
+                }
+                hideImageModal();
+                addMessageToUI(`🖼️ Image request: ${prompt}`, 'user');
+                addMessageToUI("Image generation is queued. This will show once enabled.", 'bot');
             });
         }
         if (userMenuBtn && userMenuDropdown) {
@@ -1708,6 +2606,7 @@
                     }
                     const data = await response.json();
                     setAuth(data.token, data.email);
+                    recordRegistration(data.email);
                     hideSignupModal();
                     showTinyToast("Account created.");
                 } catch (error) {
@@ -1739,6 +2638,9 @@
                         throw new Error(errorData.detail || 'Failed to send code');
                     }
                     const data = await response.json();
+                    if (data.debug_code && signupCode) {
+                        signupCode.value = data.debug_code;
+                    }
                     showTinyToast(data.message || "Verification code sent.");
                     startOtpTimer(sendCodeBtn);
                 } catch (error) {
@@ -1780,6 +2682,9 @@
                         throw new Error(errorData.detail || 'Failed to send code');
                     }
                     const data = await response.json();
+                    if (data.debug_code && forgotCode) {
+                        forgotCode.value = data.debug_code;
+                    }
                     showTinyToast(data.message || "Verification code sent.");
                     startOtpTimer(forgotSendCodeBtn);
                 } catch (error) {
