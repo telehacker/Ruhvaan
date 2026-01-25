@@ -569,6 +569,8 @@ INDEX_HTML = """<!DOCTYPE html>
             border-radius: 16px;
             padding: 22px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            max-height: 85vh;
+            overflow-y: auto;
         }
         .modal-title { display: flex; align-items: center; justify-content: space-between; }
         .modal h3 { margin-bottom: 8px; }
@@ -842,7 +844,7 @@ INDEX_HTML = """<!DOCTYPE html>
         
         <div class="brand-section">
             <div class="brand-name">RUHVAAN AI</div>
-            <div style="font-size:12px; color:#666; margin-top:5px;">Advanced Neural Core</div>
+            <div style="font-size:12px; color:#666; margin-top:5px;">Powerful AI Combo x16</div>
         </div>
 
         <button class="action-btn" id="newChatBtn" onclick="animateAction(this); resetChat()">
@@ -903,7 +905,7 @@ INDEX_HTML = """<!DOCTYPE html>
                 <div class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('active')">
                     <i class="fas fa-bars"></i>
                 </div>
-                <div class="header-title">Ruhvaan Core v1.0</div>
+                <div class="header-title">Ruhvaan AI Combo x16</div>
             </div>
             <div style="display:flex; align-items:center; gap:10px;">
                 <div class="status-badge">
@@ -1085,6 +1087,12 @@ INDEX_HTML = """<!DOCTYPE html>
                 <button class="secondary" id="profileSaveBtn">Save</button>
                 <button class="primary" id="profileResetBtn">Reset Password</button>
             </div>
+            <div style="margin-top:12px; font-size:13px; color:var(--text-muted);">
+                Plan: <strong style="color:#fff;">Free User</strong>
+            </div>
+            <div class="profile-actions" style="margin-top:8px;">
+                <button class="primary" onclick="showPlansModal()">Upgrade to Premium</button>
+            </div>
             <div style="margin-top:16px;">
                 <h4 style="margin-bottom:6px;">Registered Users (local)</h4>
                 <div id="registeredUsersList" style="font-size:13px; color:var(--text-muted);"></div>
@@ -1130,6 +1138,9 @@ INDEX_HTML = """<!DOCTYPE html>
             <div class="payment-actions">
                 <button class="primary" id="payRazorpayBtn" disabled>Pay with Razorpay (Coming Soon)</button>
                 <button id="payStripeBtn" disabled>Pay with Stripe (Coming Soon)</button>
+            </div>
+            <div class="modal-actions">
+                <button class="primary" id="subscribeBtn">Subscribe</button>
             </div>
             <div class="payment-note">Payment gateway integration will activate once backend billing is live.</div>
             <div class="modal-actions">
@@ -1179,6 +1190,17 @@ INDEX_HTML = """<!DOCTYPE html>
                     <div class="plan-price">₹1299/mo</div>
                     <div class="plan-benefits">Dedicated support, custom tools, SLA access.</div>
                     <button class="plan-select" data-plan="Advance" data-price="₹1299/mo">Choose Advance</button>
+                </div>
+            </div>
+            <div class="feature-stack" style="margin-top:18px;">
+                <div class="feature-group">
+                    <h4>What you get</h4>
+                    <ul class="feature-list">
+                        <li>AI Combo x16: smarter reasoning + faster answers.</li>
+                        <li>Unique reply style: crisp, calm, and solution-focused.</li>
+                        <li>Premium models, longer memory, and priority queue.</li>
+                        <li>PDF Q&A with save + download options.</li>
+                    </ul>
                 </div>
             </div>
             <div class="feature-stack">
@@ -1313,6 +1335,7 @@ INDEX_HTML = """<!DOCTYPE html>
         const imageGenerateBtn = document.getElementById('imageGenerateBtn');
         const paymentPlanInfo = document.getElementById('paymentPlanInfo');
         const planSelectButtons = document.querySelectorAll('.plan-select');
+        const subscribeBtn = document.getElementById('subscribeBtn');
 
         // State
         let isGenerating = false;
@@ -1411,9 +1434,14 @@ INDEX_HTML = """<!DOCTYPE html>
 
             const shouldShowDownload = sender === 'bot' && shouldOfferPdfDownload;
             const downloadButton = shouldShowDownload
-                ? `<button class="upload-btn" style="margin-top:10px;" onclick="downloadPdf(${JSON.stringify(text)})">
-                        <i class="fas fa-file-pdf"></i> Download PDF
-                   </button>`
+                ? `<div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="upload-btn" onclick="downloadPdf(${JSON.stringify(text)})">
+                            <i class="fas fa-file-pdf"></i> Download PDF
+                        </button>
+                        <button class="upload-btn" onclick="savePdfNote(${JSON.stringify(text)})">
+                            <i class="fas fa-bookmark"></i> Save
+                        </button>
+                   </div>`
                 : '';
             div.innerHTML = `
                 <div class="avatar">
@@ -1683,6 +1711,13 @@ INDEX_HTML = """<!DOCTYPE html>
             if (session.title && session.title !== 'New Chat') return;
             if (!text) return;
             session.title = text.length > 28 ? `${text.slice(0, 28)}...` : text;
+        }
+
+        function savePdfNote(text) {
+            const items = JSON.parse(localStorage.getItem('ruhvaan_saved_pdfs') || '[]');
+            items.unshift({ text, saved_at: Date.now() });
+            localStorage.setItem('ruhvaan_saved_pdfs', JSON.stringify(items.slice(0, 20)));
+            showTinyToast("PDF saved.");
         }
 
         function getRegisteredUsers() {
@@ -2210,6 +2245,11 @@ INDEX_HTML = """<!DOCTYPE html>
                     const price = button.dataset.price || '';
                     showPaymentModal(planName, price);
                 });
+            });
+        }
+        if (subscribeBtn) {
+            subscribeBtn.addEventListener('click', () => {
+                showTinyToast("Subscription flow will be enabled after payments setup.");
             });
         }
         if (imageGenerateBtn) {
