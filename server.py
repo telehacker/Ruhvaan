@@ -83,7 +83,8 @@ def find_direct_link(message: str):
 PPLX_API_URL = "https://api.perplexity.ai/chat/completions"
 PPLX_API_KEY = os.getenv("PPLX_API_KEY", "").strip()
 PPLX_MODEL = os.getenv("PPLX_MODEL", "sonar")
-CACHE_DB_PATH = os.getenv("CACHE_DB_PATH", "/tmp/cache.db")
+DEFAULT_CACHE_DB_PATH = Path(__file__).resolve().parent / "data" / "cache.db"
+CACHE_DB_PATH = os.getenv("CACHE_DB_PATH", str(DEFAULT_CACHE_DB_PATH))
 STARTUP_WEBHOOK_URL = os.getenv("STARTUP_WEBHOOK_URL", "").strip()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "").strip()
@@ -126,6 +127,8 @@ ALLOWED_ORIGINS = [
 ]
 
 app = FastAPI()
+
+Path(CACHE_DB_PATH).parent.mkdir(parents=True, exist_ok=True)
 
 app.add_middleware(
     CORSMiddleware,
@@ -883,6 +886,9 @@ def chat(req: ChatRequest, request: Request):
     user = get_user_by_token(token)
     if REQUIRE_AUTH and not user:
         raise HTTPException(status_code=401, detail="Unauthorized.")
+    if user:
+        update_last_login(user[1])
+        log_activity("Chat message", user[1], get_client_ip(request))
     # Step 1: Check GitHub Database for Links
     db_reply = find_direct_link(req.message)
     if db_reply:
@@ -1105,9 +1111,9 @@ def login(req: AuthRequest, request: Request):
         raise HTTPException(status_code=400, detail="Only @gmail.com emails are allowed.")
     user_id, password_hash = find_user_by_email(email)
     if not user_id or not password_hash:
-        raise HTTPException(status_code=401, detail="Invalid credentials.")
+        raise HTTPException(status_code=404, detail="No account found. Please sign up.")
     if not verify_password(req.password, password_hash):
-        raise HTTPException(status_code=401, detail="Invalid credentials.")
+        raise HTTPException(status_code=401, detail="Wrong password. Please try again.")
     token = create_session(user_id)
     update_last_login(email)
     notify_login("Login", email, get_client_ip(request))
@@ -1211,9 +1217,18 @@ def admin_stats(request: Request):
     now = time.time()
     day_ago = now - 86400
     week_ago = now - 7 * 86400
+    five_min_ago = now - 300
     try:
         with sqlite3.connect(CACHE_DB_PATH) as conn:
             total_users = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+            active_now = conn.execute(
+                """
+                SELECT COUNT(DISTINCT email)
+                FROM activity_logs
+                WHERE email IS NOT NULL AND created_at >= ?
+                """,
+                (five_min_ago,),
+            ).fetchone()[0]
             active_day = conn.execute(
                 """
                 SELECT COUNT(DISTINCT email)
@@ -1231,9 +1246,10 @@ def admin_stats(request: Request):
                 (week_ago,),
             ).fetchone()[0]
     except sqlite3.Error:
-        return {"total_users": 0, "active_last_24h": 0, "active_last_7d": 0}
+        return {"total_users": 0, "active_now": 0, "active_last_24h": 0, "active_last_7d": 0}
     return {
         "total_users": total_users,
+        "active_now": active_now,
         "active_last_24h": active_day,
         "active_last_7d": active_week,
     }
@@ -1244,6 +1260,8 @@ def admin_users(request: Request, limit: int = 20):
     token = request.headers.get("authorization", "").removeprefix("Bearer ").strip()
     if not ADMIN_TOKEN or token != ADMIN_TOKEN:
         raise HTTPException(status_code=401, detail="Unauthorized.")
+    now = time.time()
+    active_threshold = now - 300
     try:
         with sqlite3.connect(CACHE_DB_PATH) as conn:
             rows = conn.execute(
@@ -1259,7 +1277,12 @@ def admin_users(request: Request, limit: int = 20):
         return {"items": []}
     return {
         "items": [
-            {"email": row[0], "created_at": row[1], "last_login": row[2]}
+            {
+                "email": row[0],
+                "created_at": row[1],
+                "last_login": row[2],
+                "is_online": bool(row[2] and row[2] >= active_threshold),
+            }
             for row in rows
         ]
     }

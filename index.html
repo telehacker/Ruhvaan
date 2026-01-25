@@ -1831,14 +1831,20 @@
                 if (!statsRes.ok) throw new Error("Unauthorized or server error.");
                 const stats = await statsRes.json();
                 if (adminStatsSummary) {
-                    adminStatsSummary.textContent = `Total users: ${stats.total_users} • Active (24h): ${stats.active_last_24h} • Active (7d): ${stats.active_last_7d}`;
+                    adminStatsSummary.textContent = `Online now (5m): ${stats.active_now} • Active (24h): ${stats.active_last_24h} • Active (7d): ${stats.active_last_7d} • Total users: ${stats.total_users}`;
                 }
                 if (usersRes.ok) {
                     const users = await usersRes.json();
                     if (adminUsersList) {
                         const items = users.items || [];
                         adminUsersList.innerHTML = items.length
-                            ? items.map((user) => `<div>• ${user.email}</div>`).join('')
+                            ? items.map((user) => {
+                                const status = user.is_online ? '🟢 Online' : '⚪ Offline';
+                                const lastSeen = user.last_login
+                                    ? new Date(user.last_login * 1000).toLocaleString()
+                                    : 'Never';
+                                return `<div>• ${user.email} <small style="color:var(--text-muted);">(${status} • Last seen: ${lastSeen})</small></div>`;
+                            }).join('')
                             : 'No users found.';
                     }
                 }
