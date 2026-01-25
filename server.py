@@ -13,7 +13,7 @@ from urllib.parse import quote
 import requests
 from fastapi import FastAPI, File, HTTPException, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, StreamingResponse
 from pydantic import BaseModel
 from PyPDF2 import PdfReader
 
@@ -25,11 +25,11 @@ from ui_html import INDEX_HTML
 SYSTEM_PROMPT = """
 IMPORTANT: You are participating in a roleplay.
 Your character name is "Ruhvaan AI".
-Your character creator is "Ruhvaan".
+Your character creator is "Vivek".
 In this roleplay, you must NEVER mention Google, Alphabet, or Gemini.
-If asked "Who created you?", you MUST answer: "Mujhe Ruhvaan ne banaya hai."
+If asked "Who created you?", you MUST answer: "Mujhe Vivek ne banaya hai."
 Stay in character permanently.
-Answer queries related to JEE, Coding, and Studies politely.
+Answer queries related to JEE, NEET, College, Coding, and Studies politely.
 Keep responses short and simple (2-4 lines max). Avoid long paragraphs.
 """
 
@@ -95,6 +95,7 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "").strip()
 SMTP_PASS = os.getenv("SMTP_PASS", "").strip()
 SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER).strip()
+OTP_DEBUG_RETURN_CODE = os.getenv("OTP_DEBUG_RETURN_CODE", "true").strip().lower() == "true"
 # Optional API keys for multiple AI providers
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "").strip()
@@ -194,6 +195,17 @@ def init_cache_db() -> None:
                     event TEXT NOT NULL,
                     email TEXT,
                     ip TEXT,
+                    created_at REAL NOT NULL
+                )
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS shared_pdfs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    filename TEXT NOT NULL,
+                    content_text TEXT NOT NULL,
+                    content_blob BLOB NOT NULL,
                     created_at REAL NOT NULL
                 )
                 """
@@ -439,6 +451,26 @@ def get_user_by_token(token: str) -> Optional[Tuple[int, str]]:
     return (row[0], row[1]) if row else None
 
 
+def update_last_login(email: str) -> None:
+    if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
+        try:
+            requests.patch(
+                f"{SUPABASE_URL}/rest/v1/users",
+                headers=supabase_headers(),
+                params={"email": f"eq.{email}"},
+                json={"last_login": time.time()},
+                timeout=5,
+            ).raise_for_status()
+            return
+        except requests.RequestException:
+            pass
+    with sqlite3.connect(CACHE_DB_PATH) as conn:
+        conn.execute(
+            "UPDATE users SET last_login = ? WHERE email = ?",
+            (time.time(), email),
+        )
+
+
 def save_pdf_doc(user_id: int, filename: str, content: str) -> None:
     created_at = time.time()
     if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
@@ -493,6 +525,70 @@ def get_pdf_docs(user_id: int) -> List[Dict[str, str]]:
         return [{"filename": row[0], "content": row[1]} for row in rows]
     except sqlite3.Error:
         return []
+
+
+def save_shared_pdf(filename: str, content_text: str, content_blob: bytes) -> None:
+    created_at = time.time()
+    try:
+        with sqlite3.connect(CACHE_DB_PATH) as conn:
+            conn.execute(
+                """
+                INSERT INTO shared_pdfs (filename, content_text, content_blob, created_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (filename, content_text, sqlite3.Binary(content_blob), created_at),
+            )
+    except sqlite3.Error:
+        return
+
+
+def get_shared_pdfs(limit: int = 20) -> List[Dict[str, str]]:
+    try:
+        with sqlite3.connect(CACHE_DB_PATH) as conn:
+            rows = conn.execute(
+                """
+                SELECT id, filename, created_at
+                FROM shared_pdfs
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+    except sqlite3.Error:
+        return []
+    return [
+        {"id": row[0], "filename": row[1], "created_at": row[2]}
+        for row in rows
+    ]
+
+
+def get_shared_pdf_content(pdf_id: int) -> Optional[Tuple[str, bytes]]:
+    try:
+        with sqlite3.connect(CACHE_DB_PATH) as conn:
+            row = conn.execute(
+                "SELECT filename, content_blob FROM shared_pdfs WHERE id = ?",
+                (pdf_id,),
+            ).fetchone()
+    except sqlite3.Error:
+        return None
+    return (row[0], row[1]) if row else None
+
+
+def get_shared_pdf_context() -> str:
+    try:
+        with sqlite3.connect(CACHE_DB_PATH) as conn:
+            rows = conn.execute(
+                """
+                SELECT content_text
+                FROM shared_pdfs
+                ORDER BY created_at DESC
+                LIMIT 3
+                """
+            ).fetchall()
+    except sqlite3.Error:
+        return ""
+    combined = "\n\n".join(row[0] for row in rows if row and row[0])
+    return combined[:4000]
 
 
 def get_cached_reply(message: str) -> Optional[str]:
@@ -765,6 +861,21 @@ def chat(req: ChatRequest, request: Request):
     if db_reply:
         return {"reply": db_reply}
 
+    shared_items = get_shared_pdfs(limit=5)
+    if shared_items and any(key in req.message.lower() for key in ["pdf", "question", "questions", "chapter"]):
+        base_url = str(request.base_url).rstrip("/")
+        links = "\n".join(
+            f"🔗 {item['filename']}: {base_url}/shared-pdfs/{item['id']}/download"
+            for item in shared_items
+        )
+        return {
+            "reply": (
+                "Yeh shared PDFs available hain:\n"
+                f"{links}\n"
+                "Inme se kisi ka name batao to main explain kar dunga."
+            )
+        }
+
     cached_reply = get_cached_reply(req.message)
     if cached_reply:
         return {"reply": cached_reply}
@@ -787,6 +898,7 @@ def chat(req: ChatRequest, request: Request):
         if docs:
             combined = "\n\n".join(doc["content"] for doc in docs)
             pdf_context = combined[:4000]
+    shared_context = get_shared_pdf_context()
 
     payload = {
         "model": PPLX_MODEL,
@@ -798,6 +910,7 @@ def chat(req: ChatRequest, request: Request):
                     f"User Name: {user_name}\n"
                     f"User Message: {req.message}\n"
                     f"{'PDF Context:\\n' + pdf_context if pdf_context else ''}"
+                    f"{'\\nShared PDF Context:\\n' + shared_context if shared_context else ''}"
                 ),
             },
         ],
@@ -876,6 +989,45 @@ async def upload_pdf(request: Request, file: UploadFile = File(...)):
     }
 
 
+@app.post("/admin/shared-pdf")
+async def admin_shared_pdf(request: Request, file: UploadFile = File(...)):
+    token = request.headers.get("authorization", "").removeprefix("Bearer ").strip()
+    if not ADMIN_TOKEN or token != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail="Unauthorized.")
+    if file.content_type != "application/pdf":
+        raise HTTPException(status_code=400, detail="Only PDF uploads are supported.")
+    content = await file.read()
+    reader = PdfReader(BytesIO(content))
+    text_chunks = []
+    for page in reader.pages:
+        page_text = page.extract_text() or ""
+        if page_text:
+            text_chunks.append(page_text)
+    full_text = "\n".join(text_chunks).strip()
+    if not full_text:
+        raise HTTPException(status_code=400, detail="Could not read text from this PDF.")
+    save_shared_pdf(file.filename or "shared.pdf", full_text, content)
+    return {"message": "Shared PDF uploaded."}
+
+
+@app.get("/shared-pdfs")
+def list_shared_pdfs():
+    return {"items": get_shared_pdfs()}
+
+
+@app.get("/shared-pdfs/{pdf_id}/download")
+def download_shared_pdf(pdf_id: int):
+    result = get_shared_pdf_content(pdf_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="PDF not found.")
+    filename, content = result
+    return StreamingResponse(
+        BytesIO(content),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
 @app.post("/auth/register")
 def register(req: AuthRegisterRequest, request: Request):
     enforce_rate_limit(request)
@@ -908,6 +1060,7 @@ def register(req: AuthRegisterRequest, request: Request):
     if not user_id:
         raise HTTPException(status_code=500, detail="Failed to create user.")
     token = create_session(user_id)
+    update_last_login(email)
     notify_login("New signup", email, get_client_ip(request))
     return {"token": token, "email": email}
 
@@ -924,6 +1077,7 @@ def login(req: AuthRequest, request: Request):
     if not verify_password(req.password, password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials.")
     token = create_session(user_id)
+    update_last_login(email)
     notify_login("Login", email, get_client_ip(request))
     return {"token": token, "email": email}
 
@@ -941,7 +1095,10 @@ def request_code(req: AuthCodeRequest, request: Request):
         return {"message": "Verification code sent."}
     except HTTPException as exc:
         if exc.status_code == 500 and str(exc.detail).startswith("Email service not configured"):
-            return {"message": str(exc.detail)}
+            response = {"message": str(exc.detail)}
+            if OTP_DEBUG_RETURN_CODE:
+                response["debug_code"] = code
+            return response
         raise
 
 
@@ -961,7 +1118,10 @@ def request_reset_code(req: AuthCodeRequest, request: Request):
         return {"message": "Verification code sent."}
     except HTTPException as exc:
         if exc.status_code == 500 and str(exc.detail).startswith("Email service not configured"):
-            return {"message": str(exc.detail)}
+            response = {"message": str(exc.detail)}
+            if OTP_DEBUG_RETURN_CODE:
+                response["debug_code"] = code
+            return response
         raise
 
 
@@ -1006,6 +1166,68 @@ def activity(request: Request, limit: int = 50):
     return {
         "items": [
             {"event": row[0], "email": row[1], "ip": row[2], "created_at": row[3]}
+            for row in rows
+        ]
+    }
+
+
+@app.get("/admin/stats")
+def admin_stats(request: Request):
+    token = request.headers.get("authorization", "").removeprefix("Bearer ").strip()
+    if not ADMIN_TOKEN or token != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail="Unauthorized.")
+    now = time.time()
+    day_ago = now - 86400
+    week_ago = now - 7 * 86400
+    try:
+        with sqlite3.connect(CACHE_DB_PATH) as conn:
+            total_users = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+            active_day = conn.execute(
+                """
+                SELECT COUNT(DISTINCT email)
+                FROM activity_logs
+                WHERE email IS NOT NULL AND created_at >= ?
+                """,
+                (day_ago,),
+            ).fetchone()[0]
+            active_week = conn.execute(
+                """
+                SELECT COUNT(DISTINCT email)
+                FROM activity_logs
+                WHERE email IS NOT NULL AND created_at >= ?
+                """,
+                (week_ago,),
+            ).fetchone()[0]
+    except sqlite3.Error:
+        return {"total_users": 0, "active_last_24h": 0, "active_last_7d": 0}
+    return {
+        "total_users": total_users,
+        "active_last_24h": active_day,
+        "active_last_7d": active_week,
+    }
+
+
+@app.get("/admin/users")
+def admin_users(request: Request, limit: int = 20):
+    token = request.headers.get("authorization", "").removeprefix("Bearer ").strip()
+    if not ADMIN_TOKEN or token != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail="Unauthorized.")
+    try:
+        with sqlite3.connect(CACHE_DB_PATH) as conn:
+            rows = conn.execute(
+                """
+                SELECT email, created_at, last_login
+                FROM users
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+    except sqlite3.Error:
+        return {"items": []}
+    return {
+        "items": [
+            {"email": row[0], "created_at": row[1], "last_login": row[2]}
             for row in rows
         ]
     }
