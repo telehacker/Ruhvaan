@@ -1507,6 +1507,10 @@ INDEX_HTML = """<!DOCTYPE html>
                     body: JSON.stringify({ message: text })
                 });
 
+                if (response.status === 401) {
+                    showLoginModal("Please login to continue.");
+                    throw new Error("Unauthorized");
+                }
                 if (!response.ok) throw new Error("Server Error");
 
                 const data = await response.json();
@@ -1853,7 +1857,14 @@ INDEX_HTML = """<!DOCTYPE html>
             if (!sharedPdfList) return;
             sharedPdfList.innerHTML = '<div style="color:var(--text-muted); font-size:12px;">Loading PDFs...</div>';
             try {
-                const response = await fetch(`${API_URL}/shared-pdfs`);
+                const headers = {};
+                const token = getAuthToken();
+                if (token) headers.Authorization = `Bearer ${token}`;
+                const response = await fetch(`${API_URL}/shared-pdfs`, { headers });
+                if (response.status === 401) {
+                    sharedPdfList.innerHTML = '<div style="color:var(--text-muted); font-size:12px;">Login required to view shared PDFs.</div>';
+                    return;
+                }
                 if (!response.ok) throw new Error('Failed to load');
                 const data = await response.json();
                 if (!data.items?.length) {
@@ -1865,12 +1876,35 @@ INDEX_HTML = """<!DOCTYPE html>
                         <div class="saved-chat-item">
                             ${item.filename}
                             <small>${new Date(item.created_at * 1000).toLocaleString()}</small>
-                            <a href="${API_URL}/shared-pdfs/${item.id}/download" style="color:var(--primary); font-size:12px;">Download</a>
+                            <button class="upload-btn" style="margin-top:6px;" onclick="downloadSharedPdf(${item.id}, ${JSON.stringify(item.filename)})">
+                                <i class="fas fa-download"></i> Download
+                            </button>
                         </div>
                     `)
                     .join('');
             } catch (error) {
                 sharedPdfList.innerHTML = '<div style="color:var(--text-muted); font-size:12px;">Unable to load PDFs.</div>';
+            }
+        }
+
+        async function downloadSharedPdf(pdfId, filename) {
+            try {
+                const headers = {};
+                const token = getAuthToken();
+                if (token) headers.Authorization = `Bearer ${token}`;
+                const response = await fetch(`${API_URL}/shared-pdfs/${pdfId}/download`, { headers });
+                if (!response.ok) throw new Error('Download failed');
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename || `shared-${pdfId}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                showTinyToast("Download failed. Please login.");
             }
         }
 

@@ -95,7 +95,8 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "").strip()
 SMTP_PASS = os.getenv("SMTP_PASS", "").strip()
 SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER).strip()
-OTP_DEBUG_RETURN_CODE = os.getenv("OTP_DEBUG_RETURN_CODE", "true").strip().lower() == "true"
+OTP_DEBUG_RETURN_CODE = os.getenv("OTP_DEBUG_RETURN_CODE", "false").strip().lower() == "true"
+REQUIRE_AUTH = os.getenv("REQUIRE_AUTH", "true").strip().lower() == "true"
 # Optional API keys for multiple AI providers
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "").strip()
@@ -120,7 +121,7 @@ JINA_API_KEY = os.getenv("JINA_API_KEY", "").strip()
 COGNEURA_API_KEY = os.getenv("COGNEURA_API_KEY", "").strip()
 ALLOWED_ORIGINS = [
     origin.strip()
-    for origin in os.getenv("ALLOWED_ORIGINS", "*").split(",")
+    for origin in os.getenv("ALLOWED_ORIGINS", "").split(",")
     if origin.strip()
 ]
 
@@ -128,8 +129,8 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS or ["*"],
-    allow_credentials=True,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=bool(ALLOWED_ORIGINS),
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -298,6 +299,11 @@ def get_client_ip(request: Request) -> str:
 RATE_LIMIT_WINDOW_S = 60
 RATE_LIMIT_MAX = 20
 _RATE_LIMIT_BUCKET: Dict[str, List[float]] = {}
+_RATE_LIMIT_BUCKET_TOKEN: Dict[str, List[float]] = {}
+
+
+def get_bearer_token(request: Request) -> str:
+    return request.headers.get("authorization", "").removeprefix("Bearer ").strip()
 
 
 def enforce_rate_limit(request: Request) -> None:
@@ -308,6 +314,23 @@ def enforce_rate_limit(request: Request) -> None:
         raise HTTPException(status_code=429, detail="Too many requests. Please slow down.")
     bucket.append(now)
     _RATE_LIMIT_BUCKET[ip] = bucket
+    token = get_bearer_token(request)
+    if token:
+        token_bucket = [
+            ts for ts in _RATE_LIMIT_BUCKET_TOKEN.get(token, []) if now - ts < RATE_LIMIT_WINDOW_S
+        ]
+        if len(token_bucket) >= RATE_LIMIT_MAX:
+            raise HTTPException(status_code=429, detail="Too many requests. Please slow down.")
+        token_bucket.append(now)
+        _RATE_LIMIT_BUCKET_TOKEN[token] = token_bucket
+
+
+def require_authenticated_user(request: Request) -> Tuple[int, str]:
+    token = get_bearer_token(request)
+    user = get_user_by_token(token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized.")
+    return user
 
 
 def create_user(email: str, password: str) -> Tuple[Optional[int], str]:
@@ -854,8 +877,10 @@ def extract_user_name(message: str) -> Optional[str]:
 @app.post("/chat")
 def chat(req: ChatRequest, request: Request):
     enforce_rate_limit(request)
-    token = request.headers.get("authorization", "").removeprefix("Bearer ").strip()
+    token = get_bearer_token(request)
     user = get_user_by_token(token)
+    if REQUIRE_AUTH and not user:
+        raise HTTPException(status_code=401, detail="Unauthorized.")
     # Step 1: Check GitHub Database for Links
     db_reply = find_direct_link(req.message)
     if db_reply:
@@ -863,16 +888,15 @@ def chat(req: ChatRequest, request: Request):
 
     shared_items = get_shared_pdfs(limit=5)
     if shared_items and any(key in req.message.lower() for key in ["pdf", "question", "questions", "chapter"]):
-        base_url = str(request.base_url).rstrip("/")
         links = "\n".join(
-            f"🔗 {item['filename']}: {base_url}/shared-pdfs/{item['id']}/download"
+            f"• {item['filename']} (ID: {item['id']})"
             for item in shared_items
         )
         return {
             "reply": (
                 "Yeh shared PDFs available hain:\n"
                 f"{links}\n"
-                "Inme se kisi ka name batao to main explain kar dunga."
+                "Shared PDFs panel se download karo, phir name batao to main explain kar dunga."
             )
         }
 
@@ -949,7 +973,9 @@ def chat(req: ChatRequest, request: Request):
 
 
 @app.post("/image")
-def generate_image(req: ImageRequest):
+def generate_image(req: ImageRequest, request: Request):
+    if REQUIRE_AUTH:
+        require_authenticated_user(request)
     prompt = req.prompt.strip()
     if not prompt:
         raise HTTPException(status_code=400, detail="Prompt is required.")
@@ -966,7 +992,7 @@ def generate_image(req: ImageRequest):
 @app.post("/upload")
 async def upload_pdf(request: Request, file: UploadFile = File(...)):
     enforce_rate_limit(request)
-    token = request.headers.get("authorization", "").removeprefix("Bearer ").strip()
+    token = get_bearer_token(request)
     user = get_user_by_token(token)
     if not user:
         raise HTTPException(status_code=401, detail="Login required to upload PDFs.")
@@ -1011,12 +1037,16 @@ async def admin_shared_pdf(request: Request, file: UploadFile = File(...)):
 
 
 @app.get("/shared-pdfs")
-def list_shared_pdfs():
+def list_shared_pdfs(request: Request):
+    if REQUIRE_AUTH:
+        require_authenticated_user(request)
     return {"items": get_shared_pdfs()}
 
 
 @app.get("/shared-pdfs/{pdf_id}/download")
-def download_shared_pdf(pdf_id: int):
+def download_shared_pdf(pdf_id: int, request: Request):
+    if REQUIRE_AUTH:
+        require_authenticated_user(request)
     result = get_shared_pdf_content(pdf_id)
     if not result:
         raise HTTPException(status_code=404, detail="PDF not found.")
