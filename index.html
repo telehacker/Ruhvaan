@@ -104,6 +104,21 @@
             --border: rgba(148, 163, 184, 0.2);
             --success: #22c55e;
         }
+        body.layout-compact .sidebar { width: 260px; }
+        body.layout-compact .input-section { padding: 14px 16px; }
+        body.layout-compact .header { padding: 8px 16px; }
+        body.layout-compact .chat-container { padding: 18px var(--chat-padding-inline); }
+        body.layout-spacious .sidebar { width: 340px; }
+        body.layout-spacious .input-section { padding: 24px 28px; }
+        body.layout-spacious .header { padding: 0 36px; }
+        body.layout-spacious .chat-container { padding: 32px var(--chat-padding-inline); }
+        body.ui-glass .app-shell,
+        body.ui-glass .sidebar,
+        body.ui-glass .header,
+        body.ui-glass .input-section {
+            background: rgba(10, 10, 20, 0.6);
+            backdrop-filter: blur(18px);
+        }
 
         .app-shell {
             width: min(1400px, 100%);
@@ -884,7 +899,7 @@
         
         <div class="brand-section">
             <div class="brand-name">RUHVAAN AI</div>
-            <div style="font-size:12px; color:#666; margin-top:5px;">Powerful AI Combo x16</div>
+            <div style="font-size:12px; color:#666; margin-top:5px;">Smart Study Companion</div>
         </div>
 
         <button class="action-btn" id="newChatBtn" onclick="animateAction(this); resetChat()">
@@ -933,6 +948,10 @@
             <div class="saved-chats-header">Saved Chats</div>
             <div class="saved-chats-list" id="savedChatsList"></div>
         </div>
+        <div class="saved-chats">
+            <div class="saved-chats-header">Shared PDFs</div>
+            <div class="saved-chats-list" id="sharedPdfList"></div>
+        </div>
 
         <div class="tg-card">
             <div style="font-size:12px; color:#aaa; margin-bottom:5px;">Developer Access</div>
@@ -949,7 +968,7 @@
                 <div class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('active')">
                     <i class="fas fa-bars"></i>
                 </div>
-                <div class="header-title">Ruhvaan AI Combo x16</div>
+                <div class="header-title">Ruhvaan AI</div>
             </div>
             <div style="display:flex; align-items:center; gap:10px;">
                 <div class="status-badge">
@@ -1147,6 +1166,12 @@
                 <div class="profile-actions">
                     <button class="secondary" id="adminStatsBtn">Load Admin Stats</button>
                 </div>
+                <div style="margin-top:10px;">
+                    <input type="file" id="sharedPdfInput" accept="application/pdf" />
+                    <div class="profile-actions" style="margin-top:8px;">
+                        <button class="secondary" id="sharedPdfUploadBtn">Upload Shared PDF</button>
+                    </div>
+                </div>
                 <div id="adminStatsSummary" style="font-size:13px; color:var(--text-muted); margin-top:8px;"></div>
                 <div id="adminUsersList" style="font-size:13px; color:var(--text-muted); margin-top:8px;"></div>
             </div>
@@ -1187,6 +1212,21 @@
                         <li><button class="secondary" style="width:100%;" onclick="setTheme('synth')">Synthwave</button></li>
                         <li><button class="secondary" style="width:100%;" onclick="setTheme('emerald')">Emerald</button></li>
                         <li><button class="secondary" style="width:100%;" onclick="setTheme('slate')">Slate</button></li>
+                    </ul>
+                </div>
+                <div class="feature-group">
+                    <h4>Layout Density</h4>
+                    <ul class="feature-list">
+                        <li><button class="secondary" style="width:100%;" onclick="setLayout('compact')">Compact</button></li>
+                        <li><button class="secondary" style="width:100%;" onclick="setLayout('comfortable')">Comfortable</button></li>
+                        <li><button class="secondary" style="width:100%;" onclick="setLayout('spacious')">Spacious</button></li>
+                    </ul>
+                </div>
+                <div class="feature-group">
+                    <h4>Style Effects</h4>
+                    <ul class="feature-list">
+                        <li><button class="secondary" style="width:100%;" onclick="setGlass(true)">Glass Mode On</button></li>
+                        <li><button class="secondary" style="width:100%;" onclick="setGlass(false)">Glass Mode Off</button></li>
                     </ul>
                 </div>
             </div>
@@ -1266,7 +1306,7 @@
                 <div class="feature-group">
                     <h4>What you get</h4>
                     <ul class="feature-list">
-                        <li>AI Combo x16: smarter reasoning + faster answers.</li>
+                        <li>Premium AI stack: smarter reasoning + faster answers.</li>
                         <li>Unique reply style: crisp, calm, and solution-focused.</li>
                         <li>Premium models, longer memory, and priority queue.</li>
                         <li>PDF Q&A with save + download options.</li>
@@ -1340,6 +1380,7 @@
         const themeToggle = document.getElementById('themeToggle');
         const saveChatToggle = document.getElementById('saveChatToggle');
         const savedChatsList = document.getElementById('savedChatsList');
+        const sharedPdfList = document.getElementById('sharedPdfList');
         const voiceBtn = document.getElementById('voiceBtn');
         const loginModal = document.getElementById('loginModal');
         const signupModal = document.getElementById('signupModal');
@@ -1388,6 +1429,8 @@
         const adminStatsBtn = document.getElementById('adminStatsBtn');
         const adminStatsSummary = document.getElementById('adminStatsSummary');
         const adminUsersList = document.getElementById('adminUsersList');
+        const sharedPdfInput = document.getElementById('sharedPdfInput');
+        const sharedPdfUploadBtn = document.getElementById('sharedPdfUploadBtn');
         const closeSignup = document.getElementById('closeSignup');
         const closeSignupIcon = document.getElementById('closeSignupIcon');
         const signupError = document.getElementById('signupError');
@@ -1424,6 +1467,7 @@
             renderRegisteredUsers();
             loadSaveChatSetting();
             renderSavedChats();
+            loadSharedPdfs();
         };
 
         // --- CORE FUNCTIONS ---
@@ -1485,24 +1529,35 @@
             }
         }
 
-        // 2. Add Message to UI
-        function addMessageToUI(text, sender) {
-            const div = document.createElement('div');
-            div.className = `msg-row ${sender}`;
-            // Markdown Parsing (Basic)
+        function formatMessageText(text) {
             let formattedText = text
+                .replace(/&/g, "&amp;")
                 .replace(/</g, "&lt;")
                 .replace(/>/g, "&gt;")
                 .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
                 .replace(/`([^`]+)`/g, '<code style="background:#222; padding:2px 5px; border-radius:4px; color:#ff79c6">$1</code>');
 
-            // Code Block Detection
             if (formattedText.includes('```')) {
-                formattedText = formattedText.replace(/```(\w+)?\n([\s\S]*?)```/g, 
-                    '<pre><code class="language-$1">$2</code></pre>');
+                formattedText = formattedText.replace(
+                    /```(\w+)?\n([\s\S]*?)```/g,
+                    '<pre><code class="language-$1">$2</code></pre>'
+                );
             } else {
                 formattedText = formattedText.replace(/\n/g, '<br>');
             }
+            formattedText = formattedText.replace(
+                /(https?:\/\/[^\s<]+)/g,
+                '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
+            );
+            return formattedText;
+        }
+
+        // 2. Add Message to UI
+        function addMessageToUI(text, sender) {
+            const div = document.createElement('div');
+            div.className = `msg-row ${sender}`;
+            // Markdown Parsing (Basic)
+            const formattedText = formatMessageText(text);
 
             const shouldShowDownload = sender === 'bot' && shouldOfferPdfDownload;
             const downloadButton = shouldShowDownload
@@ -1569,7 +1624,7 @@
                         setTimeout(type, speed);
                     } else {
                         // After typing, replace textContent with HTML to render Markdown
-                        bubble.innerHTML = text.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+                        bubble.innerHTML = formatMessageText(text);
                         resolve();
                     }
                 }
@@ -1681,6 +1736,10 @@
             if (themeToggle) {
                 themeToggle.checked = storedTheme === 'light';
             }
+            const storedLayout = localStorage.getItem('ruhvaan_layout') || 'comfortable';
+            setLayout(storedLayout);
+            const glassEnabled = localStorage.getItem('ruhvaan_glass') === 'on';
+            setGlass(glassEnabled);
         }
 
         function applyTheme(theme) {
@@ -1697,6 +1756,22 @@
             if (themeToggle) {
                 themeToggle.checked = theme === 'light';
             }
+        }
+
+        function setLayout(layout) {
+            document.body.classList.remove('layout-compact', 'layout-spacious');
+            if (layout === 'compact') document.body.classList.add('layout-compact');
+            if (layout === 'spacious') document.body.classList.add('layout-spacious');
+            localStorage.setItem('ruhvaan_layout', layout);
+        }
+
+        function setGlass(enabled) {
+            if (enabled) {
+                document.body.classList.add('ui-glass');
+            } else {
+                document.body.classList.remove('ui-glass');
+            }
+            localStorage.setItem('ruhvaan_glass', enabled ? 'on' : 'off');
         }
 
         function loadSaveChatSetting() {
@@ -1768,6 +1843,34 @@
             }
         }
 
+        async function uploadSharedPdf() {
+            const token = adminTokenInput?.value?.trim() || localStorage.getItem('ruhvaan_admin_token') || '';
+            const file = sharedPdfInput?.files?.[0];
+            if (!token) {
+                showTinyToast("Admin token required.");
+                return;
+            }
+            if (!file) {
+                showTinyToast("Select a PDF first.");
+                return;
+            }
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                const response = await fetch(`${API_URL}/admin/shared-pdf`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}` },
+                    body: formData
+                });
+                if (!response.ok) throw new Error('Upload failed');
+                showTinyToast("Shared PDF uploaded.");
+                sharedPdfInput.value = '';
+                loadSharedPdfs();
+            } catch (error) {
+                showTinyToast("Upload failed.");
+            }
+        }
+
         function isSaveChatEnabled() {
             return localStorage.getItem('ruhvaan_save_chat') !== 'off';
         }
@@ -1834,6 +1937,31 @@
                     `;
                 })
                 .join('');
+        }
+
+        async function loadSharedPdfs() {
+            if (!sharedPdfList) return;
+            sharedPdfList.innerHTML = '<div style="color:var(--text-muted); font-size:12px;">Loading PDFs...</div>';
+            try {
+                const response = await fetch(`${API_URL}/shared-pdfs`);
+                if (!response.ok) throw new Error('Failed to load');
+                const data = await response.json();
+                if (!data.items?.length) {
+                    sharedPdfList.innerHTML = '<div style="color:var(--text-muted); font-size:12px;">No shared PDFs yet.</div>';
+                    return;
+                }
+                sharedPdfList.innerHTML = data.items
+                    .map((item) => `
+                        <div class="saved-chat-item">
+                            ${item.filename}
+                            <small>${new Date(item.created_at * 1000).toLocaleString()}</small>
+                            <a href="${API_URL}/shared-pdfs/${item.id}/download" style="color:var(--primary); font-size:12px;">Download</a>
+                        </div>
+                    `)
+                    .join('');
+            } catch (error) {
+                sharedPdfList.innerHTML = '<div style="color:var(--text-muted); font-size:12px;">Unable to load PDFs.</div>';
+            }
         }
 
         function loadChatSession(sessionId) {
@@ -2325,6 +2453,11 @@
         if (adminStatsBtn) {
             adminStatsBtn.addEventListener('click', () => {
                 loadAdminStats();
+            });
+        }
+        if (sharedPdfUploadBtn) {
+            sharedPdfUploadBtn.addEventListener('click', () => {
+                uploadSharedPdf();
             });
         }
         if (planSelectButtons.length) {

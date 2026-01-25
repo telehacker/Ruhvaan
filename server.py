@@ -13,7 +13,7 @@ from urllib.parse import quote
 import requests
 from fastapi import FastAPI, File, HTTPException, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, StreamingResponse
 from pydantic import BaseModel
 from PyPDF2 import PdfReader
 
@@ -195,6 +195,17 @@ def init_cache_db() -> None:
                     event TEXT NOT NULL,
                     email TEXT,
                     ip TEXT,
+                    created_at REAL NOT NULL
+                )
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS shared_pdfs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    filename TEXT NOT NULL,
+                    content_text TEXT NOT NULL,
+                    content_blob BLOB NOT NULL,
                     created_at REAL NOT NULL
                 )
                 """
@@ -516,6 +527,70 @@ def get_pdf_docs(user_id: int) -> List[Dict[str, str]]:
         return []
 
 
+def save_shared_pdf(filename: str, content_text: str, content_blob: bytes) -> None:
+    created_at = time.time()
+    try:
+        with sqlite3.connect(CACHE_DB_PATH) as conn:
+            conn.execute(
+                """
+                INSERT INTO shared_pdfs (filename, content_text, content_blob, created_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (filename, content_text, sqlite3.Binary(content_blob), created_at),
+            )
+    except sqlite3.Error:
+        return
+
+
+def get_shared_pdfs(limit: int = 20) -> List[Dict[str, str]]:
+    try:
+        with sqlite3.connect(CACHE_DB_PATH) as conn:
+            rows = conn.execute(
+                """
+                SELECT id, filename, created_at
+                FROM shared_pdfs
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+    except sqlite3.Error:
+        return []
+    return [
+        {"id": row[0], "filename": row[1], "created_at": row[2]}
+        for row in rows
+    ]
+
+
+def get_shared_pdf_content(pdf_id: int) -> Optional[Tuple[str, bytes]]:
+    try:
+        with sqlite3.connect(CACHE_DB_PATH) as conn:
+            row = conn.execute(
+                "SELECT filename, content_blob FROM shared_pdfs WHERE id = ?",
+                (pdf_id,),
+            ).fetchone()
+    except sqlite3.Error:
+        return None
+    return (row[0], row[1]) if row else None
+
+
+def get_shared_pdf_context() -> str:
+    try:
+        with sqlite3.connect(CACHE_DB_PATH) as conn:
+            rows = conn.execute(
+                """
+                SELECT content_text
+                FROM shared_pdfs
+                ORDER BY created_at DESC
+                LIMIT 3
+                """
+            ).fetchall()
+    except sqlite3.Error:
+        return ""
+    combined = "\n\n".join(row[0] for row in rows if row and row[0])
+    return combined[:4000]
+
+
 def get_cached_reply(message: str) -> Optional[str]:
     key = cache_key(message)
     if not key:
@@ -786,6 +861,21 @@ def chat(req: ChatRequest, request: Request):
     if db_reply:
         return {"reply": db_reply}
 
+    shared_items = get_shared_pdfs(limit=5)
+    if shared_items and any(key in req.message.lower() for key in ["pdf", "question", "questions", "chapter"]):
+        base_url = str(request.base_url).rstrip("/")
+        links = "\n".join(
+            f"🔗 {item['filename']}: {base_url}/shared-pdfs/{item['id']}/download"
+            for item in shared_items
+        )
+        return {
+            "reply": (
+                "Yeh shared PDFs available hain:\n"
+                f"{links}\n"
+                "Inme se kisi ka name batao to main explain kar dunga."
+            )
+        }
+
     cached_reply = get_cached_reply(req.message)
     if cached_reply:
         return {"reply": cached_reply}
@@ -808,6 +898,7 @@ def chat(req: ChatRequest, request: Request):
         if docs:
             combined = "\n\n".join(doc["content"] for doc in docs)
             pdf_context = combined[:4000]
+    shared_context = get_shared_pdf_context()
 
     payload = {
         "model": PPLX_MODEL,
@@ -819,6 +910,7 @@ def chat(req: ChatRequest, request: Request):
                     f"User Name: {user_name}\n"
                     f"User Message: {req.message}\n"
                     f"{'PDF Context:\\n' + pdf_context if pdf_context else ''}"
+                    f"{'\\nShared PDF Context:\\n' + shared_context if shared_context else ''}"
                 ),
             },
         ],
@@ -895,6 +987,45 @@ async def upload_pdf(request: Request, file: UploadFile = File(...)):
     return {
         "reply": "PDF uploaded successfully. Ask a question and I will use it for answers."
     }
+
+
+@app.post("/admin/shared-pdf")
+async def admin_shared_pdf(request: Request, file: UploadFile = File(...)):
+    token = request.headers.get("authorization", "").removeprefix("Bearer ").strip()
+    if not ADMIN_TOKEN or token != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail="Unauthorized.")
+    if file.content_type != "application/pdf":
+        raise HTTPException(status_code=400, detail="Only PDF uploads are supported.")
+    content = await file.read()
+    reader = PdfReader(BytesIO(content))
+    text_chunks = []
+    for page in reader.pages:
+        page_text = page.extract_text() or ""
+        if page_text:
+            text_chunks.append(page_text)
+    full_text = "\n".join(text_chunks).strip()
+    if not full_text:
+        raise HTTPException(status_code=400, detail="Could not read text from this PDF.")
+    save_shared_pdf(file.filename or "shared.pdf", full_text, content)
+    return {"message": "Shared PDF uploaded."}
+
+
+@app.get("/shared-pdfs")
+def list_shared_pdfs():
+    return {"items": get_shared_pdfs()}
+
+
+@app.get("/shared-pdfs/{pdf_id}/download")
+def download_shared_pdf(pdf_id: int):
+    result = get_shared_pdf_content(pdf_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="PDF not found.")
+    filename, content = result
+    return StreamingResponse(
+        BytesIO(content),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 @app.post("/auth/register")
