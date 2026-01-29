@@ -119,6 +119,15 @@ INDEX_HTML = """<!DOCTYPE html>
             background: rgba(10, 10, 20, 0.6);
             backdrop-filter: blur(18px);
         }
+        @media (max-width: 900px) {
+            body { padding: 0; }
+            .app-shell {
+                width: 100vw;
+                height: 100vh;
+                border-radius: 0;
+            }
+            .app-shell::after { border-radius: 0; }
+        }
 
         .app-shell {
             width: min(1400px, 100%);
@@ -1150,11 +1159,12 @@ INDEX_HTML = """<!DOCTYPE html>
                 <button class="primary" id="profileResetBtn">Reset Password</button>
             </div>
             <div style="margin-top:12px; font-size:13px; color:var(--text-muted);">
-                Plan: <strong style="color:#fff;">Free User</strong>
+                Plan: <strong id="profilePlanLabel" style="color:#fff;">Free User</strong>
             </div>
             <div class="profile-actions" style="margin-top:8px;">
                 <button class="primary" onclick="showPlansModal()">Upgrade to Premium</button>
             </div>
+            <div id="profilePlanPerks" style="margin-top:10px; font-size:12px; color:var(--text-muted);"></div>
             <div style="margin-top:16px;">
                 <h4 style="margin-bottom:6px;">Registered Users (local)</h4>
                 <div id="registeredUsersList" style="font-size:13px; color:var(--text-muted);"></div>
@@ -1311,6 +1321,16 @@ INDEX_HTML = """<!DOCTYPE html>
                         <li>PDF Q&A with save + download options.</li>
                     </ul>
                 </div>
+                <div class="feature-group">
+                    <h4>Premium unlocks</h4>
+                    <ul class="feature-list">
+                        <li>Unlimited chat sessions + higher daily quota.</li>
+                        <li>Priority response queue + faster replies.</li>
+                        <li>Advanced reasoning & longer context windows.</li>
+                        <li>Shared PDF access + PDF Q&amp;A summaries.</li>
+                        <li>Early access to new tools (voice, analytics).</li>
+                    </ul>
+                </div>
             </div>
             <div class="feature-stack">
                 <div class="feature-group">
@@ -1358,9 +1378,6 @@ INDEX_HTML = """<!DOCTYPE html>
         const API_URL = (() => {
             const metaBase = document.querySelector('meta[name="api-base"]')?.content?.trim();
             if (metaBase) return metaBase;
-            if (window.location.hostname.endsWith('github.io')) {
-                return 'https://ruhvaan.vercel.app';
-            }
             return window.location.origin;
         })();
         
@@ -1428,6 +1445,8 @@ INDEX_HTML = """<!DOCTYPE html>
         const adminStatsBtn = document.getElementById('adminStatsBtn');
         const adminStatsSummary = document.getElementById('adminStatsSummary');
         const adminUsersList = document.getElementById('adminUsersList');
+        const profilePlanLabel = document.getElementById('profilePlanLabel');
+        const profilePlanPerks = document.getElementById('profilePlanPerks');
         const sharedPdfInput = document.getElementById('sharedPdfInput');
         const sharedPdfUploadBtn = document.getElementById('sharedPdfUploadBtn');
         const closeSignup = document.getElementById('closeSignup');
@@ -1829,6 +1848,16 @@ INDEX_HTML = """<!DOCTYPE html>
             return activeSession;
         }
 
+        function formatTimestamp(tsSeconds, fallback = '—') {
+            if (!tsSeconds) return fallback;
+            const date = new Date(tsSeconds * 1000);
+            if (Number.isNaN(date.getTime())) return fallback;
+            return new Intl.DateTimeFormat('en-IN', {
+                dateStyle: 'medium',
+                timeStyle: 'short'
+            }).format(date);
+        }
+
         function renderSavedChats() {
             if (!savedChatsList) return;
             const sessions = getChatSessions();
@@ -1842,7 +1871,7 @@ INDEX_HTML = """<!DOCTYPE html>
             }
             savedChatsList.innerHTML = sessions
                 .map((session) => {
-                    const time = new Date(session.created_at || Date.now()).toLocaleString();
+                    const time = formatTimestamp((session.created_at || Date.now()) / 1000);
                     return `
                         <div class="saved-chat-item" data-session-id="${session.id}">
                             ${session.title || 'New Chat'}
@@ -1875,7 +1904,7 @@ INDEX_HTML = """<!DOCTYPE html>
                     .map((item) => `
                         <div class="saved-chat-item">
                             ${item.filename}
-                            <small>${new Date(item.created_at * 1000).toLocaleString()}</small>
+                            <small>${formatTimestamp(item.created_at)}</small>
                             <button class="upload-btn" style="margin-top:6px;" onclick="downloadSharedPdf(${item.id}, ${JSON.stringify(item.filename)})">
                                 <i class="fas fa-download"></i> Download
                             </button>
@@ -1987,9 +2016,7 @@ INDEX_HTML = """<!DOCTYPE html>
                         adminUsersList.innerHTML = items.length
                             ? items.map((user) => {
                                 const status = user.is_online ? '🟢 Online' : '⚪ Offline';
-                                const lastSeen = user.last_login
-                                    ? new Date(user.last_login * 1000).toLocaleString()
-                                    : 'Never';
+                                const lastSeen = formatTimestamp(user.last_login, 'Never');
                                 return `<div>• ${user.email} <small style="color:var(--text-muted);">(${status} • Last seen: ${lastSeen})</small></div>`;
                             }).join('')
                             : 'No users found.';
@@ -2053,12 +2080,34 @@ INDEX_HTML = """<!DOCTYPE html>
             localStorage.setItem('ruhvaan_email', email);
             localStorage.removeItem('ruhvaan_guest_count');
             refreshAuthUI();
+            loadSharedPdfs();
         }
 
         function clearAuth() {
             localStorage.removeItem('ruhvaan_token');
             localStorage.removeItem('ruhvaan_email');
             refreshAuthUI();
+        }
+
+        function getPremiumPlan() {
+            return localStorage.getItem('ruhvaan_plan') || 'Free';
+        }
+
+        function setPremiumPlan(planName) {
+            localStorage.setItem('ruhvaan_plan', planName);
+            renderPremiumState();
+        }
+
+        function renderPremiumState() {
+            const plan = getPremiumPlan();
+            if (profilePlanLabel) {
+                profilePlanLabel.textContent = plan === 'Free' ? 'Free User' : `${plan} Member`;
+            }
+            if (profilePlanPerks) {
+                profilePlanPerks.innerHTML = plan === 'Free'
+                    ? 'Upgrade to unlock: unlimited chat, priority queue, advanced reasoning, and shared PDF access.'
+                    : 'Unlocked: unlimited chat, priority responses, advanced reasoning, shared PDFs, and early access tools.';
+            }
         }
 
         function refreshAuthUI() {
@@ -2153,6 +2202,7 @@ INDEX_HTML = """<!DOCTYPE html>
             if (adminTokenInput) {
                 adminTokenInput.value = localStorage.getItem('ruhvaan_admin_token') || '';
             }
+            renderPremiumState();
         }
 
         function saveProfile() {
@@ -2511,7 +2561,10 @@ INDEX_HTML = """<!DOCTYPE html>
         }
         if (subscribeBtn) {
             subscribeBtn.addEventListener('click', () => {
-                showTinyToast("Subscription flow will be enabled after payments setup.");
+                const planName = paymentPlanInfo?.textContent?.split(' selected')[0] || 'Premium';
+                setPremiumPlan(planName);
+                hidePaymentModal();
+                showTinyToast("Premium unlocked. Welcome!");
             });
         }
         if (imageGenerateBtn) {

@@ -1237,27 +1237,15 @@ def admin_stats(request: Request):
         with sqlite3.connect(CACHE_DB_PATH) as conn:
             total_users = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
             active_now = conn.execute(
-                """
-                SELECT COUNT(DISTINCT email)
-                FROM activity_logs
-                WHERE email IS NOT NULL AND created_at >= ?
-                """,
+                "SELECT COUNT(*) FROM users WHERE last_login IS NOT NULL AND last_login >= ?",
                 (five_min_ago,),
             ).fetchone()[0]
             active_day = conn.execute(
-                """
-                SELECT COUNT(DISTINCT email)
-                FROM activity_logs
-                WHERE email IS NOT NULL AND created_at >= ?
-                """,
+                "SELECT COUNT(*) FROM users WHERE last_login IS NOT NULL AND last_login >= ?",
                 (day_ago,),
             ).fetchone()[0]
             active_week = conn.execute(
-                """
-                SELECT COUNT(DISTINCT email)
-                FROM activity_logs
-                WHERE email IS NOT NULL AND created_at >= ?
-                """,
+                "SELECT COUNT(*) FROM users WHERE last_login IS NOT NULL AND last_login >= ?",
                 (week_ago,),
             ).fetchone()[0]
     except sqlite3.Error:
