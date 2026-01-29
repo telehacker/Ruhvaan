@@ -83,7 +83,10 @@ def find_direct_link(message: str):
 PPLX_API_URL = "https://api.perplexity.ai/chat/completions"
 PPLX_API_KEY = os.getenv("PPLX_API_KEY", "").strip()
 PPLX_MODEL = os.getenv("PPLX_MODEL", "sonar")
-DEFAULT_CACHE_DB_PATH = Path(__file__).resolve().parent / "data" / "cache.db"
+if os.getenv("VERCEL") or os.getenv("VERCEL_ENV"):
+    DEFAULT_CACHE_DB_PATH = Path("/tmp/cache.db")
+else:
+    DEFAULT_CACHE_DB_PATH = Path(__file__).resolve().parent / "data" / "cache.db"
 CACHE_DB_PATH = os.getenv("CACHE_DB_PATH", str(DEFAULT_CACHE_DB_PATH))
 STARTUP_WEBHOOK_URL = os.getenv("STARTUP_WEBHOOK_URL", "").strip()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
@@ -137,6 +140,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def apply_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+    return response
 
 def init_cache_db() -> None:
     try:
